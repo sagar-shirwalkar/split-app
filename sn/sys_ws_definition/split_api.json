@@ -1,0 +1,73 @@
+{
+  "name": "split_api",
+  "api_path": "x_split",
+  "active": true,
+  "operations": [
+    {
+      "name": "get_groups",
+      "method": "GET",
+      "relative_path": "groups",
+      "script": "file:get_groups.js"
+    },
+    {
+      "name": "post_groups",
+      "method": "POST",
+      "relative_path": "groups",
+      "script": "file:post_groups.js"
+    },
+    {
+      "name": "get_group",
+      "method": "GET",
+      "relative_path": "groups/{groupId}",
+      "script": "file:get_group.js"
+    },
+    {
+      "name": "post_members",
+      "method": "POST",
+      "relative_path": "groups/{groupId}/members",
+      "script": "file:post_members.js"
+    },
+    {
+      "name": "delete_member",
+      "method": "DELETE",
+      "relative_path": "groups/{groupId}/members/{userSysId}",
+      "script": "file:delete_member.js"
+    },
+    {
+      "name": "post_expenses",
+      "method": "POST",
+      "relative_path": "groups/{groupId}/expenses",
+      "script": "file:post_expenses.js"
+    },
+    {
+      "name": "get_expenses",
+      "method": "GET",
+      "relative_path": "groups/{groupId}/expenses",
+      "script": "file:get_expenses.js"
+    },
+    {
+      "name": "get_expense",
+      "method": "GET",
+      "relative_path": "groups/{groupId}/expenses/{expenseId}",
+      "script": "file:get_expense.js"
+    },
+    {
+      "name": "get_balances",
+      "method": "GET",
+      "relative_path": "groups/{groupId}/balances",
+      "script": "file:get_balances.js"
+    },
+    {
+      "name": "post_settlements",
+      "method": "POST",
+      "relative_path": "groups/{groupId}/settlements",
+      "script": "file:post_settlements.js"
+    },
+    {
+      "name": "get_user_dashboard",
+      "method": "GET",
+      "relative_path": "user/dashboard",
+      "script": "file:get_user_dashboard.js"
+    }
+  ]
+}

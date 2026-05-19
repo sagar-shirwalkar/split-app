@@ -1,0 +1,26 @@
+{
+  "name": "x_split_membership",
+  "label": "Membership",
+  "fields": [
+    {
+      "column_name": "group",
+      "type": "reference",
+      "reference": "x_split_group",
+      "mandatory": true
+    },
+    {
+      "column_name": "user",
+      "type": "reference",
+      "reference": "sys_user",
+      "mandatory": true
+    },
+    {
+      "column_name": "role",
+      "type": "choice",
+      "choices": "admin,member",
+      "default_value": "member",
+      "mandatory": true
+    }
+  ],
+  "unique_keys": ["group", "user"]
+}

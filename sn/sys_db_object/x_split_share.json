@@ -1,0 +1,43 @@
+{
+  "name": "x_split_share",
+  "label": "Expense Share",
+  "fields": [
+    {
+      "column_name": "expense",
+      "type": "reference",
+      "reference": "x_split_expense",
+      "mandatory": true
+    },
+    {
+      "column_name": "user",
+      "type": "reference",
+      "reference": "sys_user",
+      "mandatory": true
+    },
+    {
+      "column_name": "amount",
+      "type": "decimal",
+      "mandatory": true
+    },
+    {
+      "column_name": "percentage",
+      "type": "decimal",
+      "nullable": true
+    },
+    {
+      "column_name": "shares",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "column_name": "settled_amount",
+      "type": "decimal",
+      "default_value": 0
+    },
+    {
+      "column_name": "settled",
+      "type": "boolean",
+      "computed": true
+    }
+  ]
+}

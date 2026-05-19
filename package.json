@@ -1,0 +1,14 @@
+{
+  "name": "split-app",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "deploy": "snc deploy sn/ --instance https://YOUR_INSTANCE.service-now.com --username admin --password yourpassword"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "@servicenow/sdk": "^4.6.1"
+  }
+}

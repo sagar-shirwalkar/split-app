@@ -1,0 +1,44 @@
+{
+  "name": "x_split_settlement",
+  "label": "Settlement",
+  "fields": [
+    {
+      "column_name": "group",
+      "type": "reference",
+      "reference": "x_split_group",
+      "mandatory": true
+    },
+    {
+      "column_name": "from_user",
+      "type": "reference",
+      "reference": "sys_user",
+      "mandatory": true
+    },
+    {
+      "column_name": "to_user",
+      "type": "reference",
+      "reference": "sys_user",
+      "mandatory": true
+    },
+    {
+      "column_name": "amount",
+      "type": "decimal",
+      "mandatory": true
+    },
+    {
+      "column_name": "date",
+      "type": "date",
+      "mandatory": true
+    },
+    {
+      "column_name": "payment_method",
+      "type": "string",
+      "max_length": 100
+    },
+    {
+      "column_name": "notes",
+      "type": "string",
+      "max_length": 500
+    }
+  ]
+}

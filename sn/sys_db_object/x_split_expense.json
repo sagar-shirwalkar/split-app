@@ -1,0 +1,52 @@
+{
+  "name": "x_split_expense",
+  "label": "Expense",
+  "fields": [
+    {
+      "column_name": "group",
+      "type": "reference",
+      "reference": "x_split_group",
+      "mandatory": true
+    },
+    {
+      "column_name": "description",
+      "type": "string",
+      "max_length": 255,
+      "mandatory": true
+    },
+    {
+      "column_name": "amount",
+      "type": "decimal",
+      "mandatory": true
+    },
+    {
+      "column_name": "date",
+      "type": "date",
+      "mandatory": true
+    },
+    {
+      "column_name": "category",
+      "type": "choice",
+      "choices": "Food & Drink,Travel,Utilities,Entertainment,Other",
+      "default_value": "Other",
+      "mandatory": true
+    },
+    {
+      "column_name": "payer",
+      "type": "reference",
+      "reference": "sys_user",
+      "mandatory": true
+    },
+    {
+      "column_name": "split_type",
+      "type": "choice",
+      "choices": "equal,exact,percentage,shares",
+      "mandatory": true
+    },
+    {
+      "column_name": "notes",
+      "type": "string",
+      "max_length": 500
+    }
+  ]
+}

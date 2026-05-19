@@ -1,0 +1,32 @@
+{
+  "name": "x_split_group",
+  "label": "Group",
+  "super_class": "",
+  "user_role": "",
+  "fields": [
+    {
+      "column_name": "name",
+      "type": "string",
+      "max_length": 255,
+      "mandatory": true
+    },
+    {
+      "column_name": "description",
+      "type": "string",
+      "max_length": 4000
+    },
+    {
+      "column_name": "base_currency",
+      "type": "choice",
+      "choices": "USD,EUR,INR,GBP",
+      "default_value": "USD",
+      "mandatory": true
+    },
+    {
+      "column_name": "created_by",
+      "type": "reference",
+      "reference": "sys_user",
+      "read_only": true
+    }
+  ]
+}

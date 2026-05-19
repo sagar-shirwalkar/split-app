@@ -1,5 +1,5 @@
 import { ReactiveController, ReactiveControllerHost } from "lit";
-import { apiGet, apiPost } from "../services/api.js";
+import { apiGet, apiPost, apiPut, apiDelete } from "../services/api.js";
 
 export interface Group {
   sys_id: string;
@@ -24,11 +24,13 @@ export interface Expense {
   payer: { sys_id: string; name: string };
   split_type: string;
   notes: string;
+  receipt_image?: string;
 }
 
 export interface UserDashboard {
   total_owed: number;
   total_owing: number;
+  current_user?: string;
 }
 
 interface AppState {
@@ -38,6 +40,7 @@ interface AppState {
   balances: Balance[];
   expenses: Expense[];
   userDashboard: UserDashboard | null;
+  currentUser: string | null;
   currentView: "dashboard" | "groups" | "group-detail";
   loading: boolean;
 }
@@ -50,6 +53,7 @@ export class StoreController implements ReactiveController {
     balances: [],
     expenses: [],
     userDashboard: null,
+    currentUser: null,
     currentView: "dashboard",
     loading: false,
   };
@@ -78,7 +82,11 @@ export class StoreController implements ReactiveController {
 
   async loadDashboard() {
     try {
-      this.state.userDashboard = await apiGet("/user/dashboard");
+      const dash: UserDashboard = await apiGet("/user/dashboard");
+      this.state.userDashboard = dash;
+      if (dash.current_user) {
+        this.state.currentUser = dash.current_user;
+      }
     } catch (e) {}
     this.host.requestUpdate();
   }
@@ -128,14 +136,26 @@ export class StoreController implements ReactiveController {
     await this.loadGroupDetail(this.state.currentGroupId);
   }
 
+  async updateExpense(expenseId: string, data: any) {
+    if (!this.state.currentGroupId) return;
+    await apiPut(
+      `/groups/${this.state.currentGroupId}/expenses/${expenseId}`,
+      data,
+    );
+    await this.loadGroupDetail(this.state.currentGroupId);
+  }
+
+  async deleteExpense(expenseId: string) {
+    if (!this.state.currentGroupId) return;
+    await apiDelete(
+      `/groups/${this.state.currentGroupId}/expenses/${expenseId}`,
+    );
+    await this.loadGroupDetail(this.state.currentGroupId);
+  }
+
   async recordSettlement(data: any) {
     if (!this.state.currentGroupId) return;
     await apiPost(`/groups/${this.state.currentGroupId}/settlements`, data);
     await this.loadGroupDetail(this.state.currentGroupId);
   }
-}
-
-function apiDelete(path: string) {
-  return apiPost(path, {}); // simplified – proper DELETE via SDK may need api.http
-  // Note: The above apiDelete is a placeholder; I'll provide a correct api.http method in the API service.
 }

@@ -21,6 +21,7 @@
       },
       split_type: expGr.split_type.toString(),
       notes: expGr.notes.toString(),
+      receipt_image: expGr.receipt_image.toString(),
     });
   }
   return expenses;

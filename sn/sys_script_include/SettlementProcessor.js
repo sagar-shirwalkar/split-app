@@ -6,9 +6,11 @@ SettlementProcessor.prototype = {
     var utils = new SplitUtils();
     utils.requireMembership(settlementData.group);
 
-    if (settlementData.from_user !== gs.getUserID()) {
+    var actualFrom = settlementData.from_user || gs.getUserID();
+    if (actualFrom !== gs.getUserID()) {
       throw new Error("You can only record your own settlements.");
     }
+    settlementData.from_user = actualFrom;
 
     var balanceCalc = new BalanceCalculator();
     var netBalance = balanceCalc.getNetBalanceBetween(
@@ -27,7 +29,7 @@ SettlementProcessor.prototype = {
     shareGr.addQuery("expense.group", settlementData.group);
     shareGr.addQuery("user", settlementData.from_user);
     shareGr.addQuery("expense.payer", settlementData.to_user);
-    shareGr.addQuery("settled", false);
+    shareGr.addEncodedQuery("settled_amount!=amount");
     shareGr.orderBy("expense.date");
     shareGr.query();
 

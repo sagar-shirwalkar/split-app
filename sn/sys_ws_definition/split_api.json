@@ -46,6 +46,18 @@
       "script": "file:get_expenses.js"
     },
     {
+      "name": "put_expense",
+      "method": "PUT",
+      "relative_path": "groups/{groupId}/expenses/{expenseId}",
+      "script": "file:put_expense.js"
+    },
+    {
+      "name": "delete_expense",
+      "method": "DELETE",
+      "relative_path": "groups/{groupId}/expenses/{expenseId}",
+      "script": "file:delete_expense.js"
+    },
+    {
       "name": "get_expense",
       "method": "GET",
       "relative_path": "groups/{groupId}/expenses/{expenseId}",

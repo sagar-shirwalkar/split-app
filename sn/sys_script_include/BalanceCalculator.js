@@ -31,6 +31,25 @@ BalanceCalculator.prototype = {
       rawDebts[k] = (rawDebts[k] || 0) - settAmount;
     }
 
+    // Normalize: move negative debts to the opposite direction.
+    // E.g., if A owes B $30 from shares and B pays A $10 (settlement),
+    // rawDebts["A:B"] = 30, rawDebts["B:A"] = -10.
+    // After normalization: rawDebts["A:B"] = 20.
+    var normPairs = [];
+    for (var p in rawDebts) {
+      if (rawDebts[p] < 0) normPairs.push(p);
+    }
+    for (var ni = 0; ni < normPairs.length; ni++) {
+      var np = normPairs[ni];
+      if (rawDebts.hasOwnProperty(np) && rawDebts[np] < 0) {
+        var nParts = np.split(":");
+        var rev = nParts[1] + ":" + nParts[0];
+        var nv = rawDebts[np];
+        rawDebts[rev] = (rawDebts[rev] || 0) + nv;
+        delete rawDebts[np];
+      }
+    }
+
     var net = {};
     for (var pair in rawDebts) {
       var parts = pair.split(":");

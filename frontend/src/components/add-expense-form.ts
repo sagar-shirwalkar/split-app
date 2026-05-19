@@ -15,7 +15,8 @@ export class AddExpenseForm extends LitElement {
   @state() payer = "";
   @state() split_type = "equal";
   @state() notes = "";
-  @state() shares: { user: string; amount: number }[] = []; // for exact/percentage/shares
+  @state() shares: { user: string; amount?: number; percentage?: number; shares?: number }[] = [];
+  @state() receiptImage = "";
 
   render() {
     return html`
@@ -79,7 +80,13 @@ export class AddExpenseForm extends LitElement {
           ${this.split_type !== "equal"
             ? html`
                 <div class="mb-2">
-                  <label class="block text-sm">Shares</label>
+                  <label class="block text-sm">
+                    ${this.split_type === "exact"
+                      ? "Amounts"
+                      : this.split_type === "percentage"
+                        ? "Percentages"
+                        : "Shares"}
+                  </label>
                   ${this.members.map(
                     (m) => html`
                       <div class="flex items-center gap-2">
@@ -96,6 +103,12 @@ export class AddExpenseForm extends LitElement {
                 </div>
               `
             : ""}
+          <input
+            class="border p-2 mb-2 w-full"
+            placeholder="Receipt image URL (optional)"
+            .value=${this.receiptImage}
+            @input=${(e: any) => (this.receiptImage = e.target.value)}
+          />
           <textarea
             class="border p-2 mb-2 w-full"
             placeholder="Notes"
@@ -115,14 +128,31 @@ export class AddExpenseForm extends LitElement {
   }
 
   private updateShare(userId: string, value: string) {
+    const parsed = parseFloat(value) || 0;
     const idx = this.shares.findIndex((s) => s.user === userId);
-    if (idx >= 0) {
-      this.shares[idx].amount = parseFloat(value) || 0;
+    if (this.split_type === "percentage") {
+      const entry = { user: userId, percentage: parsed };
+      if (idx >= 0) {
+        this.shares[idx] = entry;
+      } else {
+        this.shares = [...this.shares, entry];
+      }
+    } else if (this.split_type === "shares") {
+      const entry = { user: userId, shares: parsed };
+      if (idx >= 0) {
+        this.shares[idx] = entry;
+      } else {
+        this.shares = [...this.shares, entry];
+      }
     } else {
-      this.shares = [
-        ...this.shares,
-        { user: userId, amount: parseFloat(value) || 0 },
-      ];
+      if (idx >= 0) {
+        this.shares[idx].amount = parsed;
+      } else {
+        this.shares = [
+          ...this.shares,
+          { user: userId, amount: parsed },
+        ];
+      }
     }
   }
 
@@ -136,6 +166,7 @@ export class AddExpenseForm extends LitElement {
       payer: this.payer || undefined,
       split_type: this.split_type,
       notes: this.notes,
+      receipt_image: this.receiptImage || undefined,
     };
     if (this.split_type !== "equal") {
       payload.shares = this.shares;
@@ -147,5 +178,6 @@ export class AddExpenseForm extends LitElement {
     this.date = "";
     this.notes = "";
     this.shares = [];
+    this.receiptImage = "";
   }
 }

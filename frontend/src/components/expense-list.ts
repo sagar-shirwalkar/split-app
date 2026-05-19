@@ -21,7 +21,18 @@ export class ExpenseList extends LitElement {
                 <span class="text-sm text-gray-500 ml-2">${exp.category}</span>
                 <div class="text-xs text-gray-400">
                   Paid by ${exp.payer.name} on ${exp.date}
+                  ${exp.notes ? html`&mdash; <em>${exp.notes}</em>` : ""}
                 </div>
+                ${(exp as any).receipt_image
+                  ? html`
+                      <a
+                        href=${(exp as any).receipt_image}
+                        target="_blank"
+                        class="text-xs text-indigo-600 underline"
+                        >View Receipt</a
+                      >
+                    `
+                  : ""}
               </div>
               <span class="font-mono">${exp.amount}</span>
             </div>

@@ -47,6 +47,12 @@
       "column_name": "notes",
       "type": "string",
       "max_length": 500
+    },
+    {
+      "column_name": "receipt_image",
+      "type": "string",
+      "max_length": 500,
+      "nullable": true
     }
   ]
 }

@@ -24,6 +24,13 @@ export async function apiPost(path: string, data: any): Promise<any> {
   return res.data;
 }
 
+export async function apiPut(path: string, data: any): Promise<any> {
+  const res = await client.api.put(`${BASE}${path}`, data, {
+    headers: { "Content-Type": "application/json" },
+  });
+  return res.data;
+}
+
 export async function apiDelete(path: string): Promise<any> {
   const res = await client.api.delete(`${BASE}${path}`);
   return res.data;

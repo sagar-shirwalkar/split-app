@@ -7,4 +7,12 @@ export default defineConfig({
   build: {
     outDir: "dist",
   },
+  server: {
+    proxy: {
+      "/api/x_split": {
+        target: process.env.VITE_SN_INSTANCE || "https://your-instance.service-now.com",
+        changeOrigin: true,
+      },
+    },
+  },
 });

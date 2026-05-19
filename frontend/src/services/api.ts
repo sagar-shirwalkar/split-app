@@ -1,37 +1,35 @@
-import { ServiceNowClient } from "@servicenow/sdk";
-
-const client = new ServiceNowClient({
-  instance: "your-instance.service-now.com",
-  auth: {
-    username: "your-username",
-    password: "your-password",
-  },
-});
-
 const BASE = "/api/x_split";
 
-export async function apiGet(path: string): Promise<any> {
-  const res = await client.api.get(`${BASE}${path}`, {
+async function request(method: string, path: string, data?: any): Promise<any> {
+  const opts: RequestInit = {
+    method,
     headers: { Accept: "application/json" },
-  });
-  return res.data;
+    credentials: "include",
+  };
+  if (data !== undefined) {
+    (opts.headers as Record<string, string>)["Content-Type"] =
+      "application/json";
+    opts.body = JSON.stringify(data);
+  }
+  const res = await fetch(`${BASE}${path}`, opts);
+  if (!res.ok) {
+    throw new Error(`API ${method} ${path} returned ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function apiGet(path: string): Promise<any> {
+  return request("GET", path);
 }
 
 export async function apiPost(path: string, data: any): Promise<any> {
-  const res = await client.api.post(`${BASE}${path}`, data, {
-    headers: { "Content-Type": "application/json" },
-  });
-  return res.data;
+  return request("POST", path, data);
 }
 
 export async function apiPut(path: string, data: any): Promise<any> {
-  const res = await client.api.put(`${BASE}${path}`, data, {
-    headers: { "Content-Type": "application/json" },
-  });
-  return res.data;
+  return request("PUT", path, data);
 }
 
 export async function apiDelete(path: string): Promise<any> {
-  const res = await client.api.delete(`${BASE}${path}`);
-  return res.data;
+  return request("DELETE", path);
 }

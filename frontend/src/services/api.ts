@@ -1,4 +1,19 @@
-const BASE = "/api/x_split";
+const envBase = import.meta.env.VITE_API_BASE as string | undefined;
+let BASE = envBase || "/api/x_split";
+
+export async function discoverApiBase(): Promise<string> {
+  try {
+    const res = await fetch(
+      "/api/now/table/sys_ws_definition?sysparm_query=name=split_api&sysparm_fields=base_uri&sysparm_limit=1"
+    );
+    const data = await res.json();
+    if (data.result?.length > 0 && data.result[0].base_uri) {
+      BASE = data.result[0].base_uri;
+      return BASE;
+    }
+  } catch {}
+  return BASE;
+}
 
 async function request(method: string, path: string, data?: any): Promise<any> {
   const opts: RequestInit = {

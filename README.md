@@ -44,7 +44,7 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 | **Backend** | ServiceNow scoped application (scope `x_split`) |
 | **Data** | Custom ServiceNow tables — `x_split_group`, `x_split_membership`, `x_split_expense`, `x_split_share`, `x_split_settlement` |
 | **API** | ServiceNow REST API with Script Includes for business logic |
-| **Deployment** | [ServiceNow SDK](https://www.servicenow.com/docs/csh?topicname=servicenow-sdk-landing&version=latest) (`@servicenow/sdk`) |
+| **Deployment** | `deploy.js` (Node.js) + `setup-bg-script.js` (ServiceNow Background Script) |
 
 ## Project Structure
 
@@ -67,7 +67,9 @@ split-app/
 │   ├── index.html
 │   ├── vite.config.ts
 │   └── package.json
-├── sn/                          # ServiceNow backend artifacts
+├── setup-bg-script.js            # One-time bootstrap (run in ServiceNow Background Scripts)
+├── deploy.js                     # Deploy/update script includes and API
+├── sn/                           # ServiceNow backend artifacts
 │   ├── app.json
 │   ├── sys_db_object/           # Custom table definitions
 │   ├── sys_script_include/      # Business logic
@@ -78,7 +80,7 @@ split-app/
 
 ### REST API Endpoints
 
-All under `/api/x_split/`:
+All under the discovered `base_uri` (e.g., `/api/2053373/x_split/`):
 
 | Method | Path | Description |
 |---|---|---|
@@ -110,8 +112,11 @@ All under `/api/x_split/`:
 cd frontend && npm install
 cd ..
 
-# Set your ServiceNow instance URL (used by Vite proxy in dev mode)
+# Set your ServiceNow instance URL and instance ID (used by Vite proxy in dev mode)
+# The instance ID is the numeric prefix in the API path — find it by querying:
+#   GET /api/now/table/sys_ws_definition?sysparm_query=name=split_api&sysparm_fields=base_uri
 export VITE_SN_INSTANCE=https://your-instance.service-now.com
+export VITE_SN_INSTANCE_ID=123456  # from base_uri, e.g. /api/123456/x_split
 ```
 
 ### Start the dev server
@@ -120,18 +125,25 @@ export VITE_SN_INSTANCE=https://your-instance.service-now.com
 npm run dev
 ```
 
-This starts the Vite dev server (default: `http://localhost:5173`). API requests to `/api/x_split/*` are proxied to the ServiceNow instance configured in `VITE_SN_INSTANCE`. The browser authenticates using your ServiceNow session.
+This starts the Vite dev server (default: `http://localhost:5173`). API requests to `/api/x_split/*` are proxied to the ServiceNow instance and rewritten to use the instance-specific path (`/api/{VITE_SN_INSTANCE_ID}/x_split/*`). The browser authenticates using your ServiceNow session.
 
 ### Testing with curl examples
 
-You can test the REST API directly against your ServiceNow instance. Use Basic Auth or a session cookie:
+You can test the REST API directly against your ServiceNow instance. The API path includes the instance ID — find it by checking the `base_uri` of the `split_api` web service definition:
 
 ```bash
+# First, discover the correct API base path
+API_BASE=$(curl -s --user admin:yourpass \
+  "https://your-instance.service-now.com/api/now/table/sys_ws_definition?sysparm_query=name=split_api&sysparm_fields=base_uri" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['base_uri'])")
+echo "API base: $API_BASE"
+
+# Now test with the discovered path
 SN=https://your-instance.service-now.com
 AUTH="--user admin:yourpassword"
 
 # 1. Create a group
-GROUP=$(curl -s $AUTH -X POST "$SN/api/x_split/groups" \
+GROUP=$(curl -s $AUTH -X POST "$SN$API_BASE/groups" \
   -H "Content-Type: application/json" \
   -d '{"name":"Goa Trip 2025","description":"Beach vacation"}')
 echo "$GROUP"
@@ -144,34 +156,34 @@ echo "$USERS"
 # Pick two other users and use their sys_ids
 
 # 3. Add members
-curl -s $AUTH -X POST "$SN/api/x_split/groups/$GROUP_ID/members" \
+curl -s $AUTH -X POST "$SN$API_BASE/groups/$GROUP_ID/members" \
   -H "Content-Type: application/json" \
   -d '{"user_sys_id":"user1_sys_id"}'
-curl -s $AUTH -X POST "$SN/api/x_split/groups/$GROUP_ID/members" \
+curl -s $AUTH -X POST "$SN$API_BASE/groups/$GROUP_ID/members" \
   -H "Content-Type: application/json" \
   -d '{"user_sys_id":"user2_sys_id"}'
 
 # 4. Add an equal-split expense of $90
-EXPENSE=$(curl -s $AUTH -X POST "$SN/api/x_split/groups/$GROUP_ID/expenses" \
+EXPENSE=$(curl -s $AUTH -X POST "$SN$API_BASE/groups/$GROUP_ID/expenses" \
   -H "Content-Type: application/json" \
   -d '{"description":"Dinner","amount":90.00,"date":"2025-06-01","category":"Food & Drink","split_type":"equal"}')
 echo "$EXPENSE"
 
 # 5. View balances
-curl -s $AUTH "$SN/api/x_split/groups/$GROUP_ID/balances"
+curl -s $AUTH "$SN$API_BASE/groups/$GROUP_ID/balances"
 # → All three users see a balance of $30 each
 
 # 6. Record a settlement (user B → payer A, $30)
-curl -s $AUTH -X POST "$SN/api/x_split/groups/$GROUP_ID/settlements" \
+curl -s $AUTH -X POST "$SN$API_BASE/groups/$GROUP_ID/settlements" \
   -H "Content-Type: application/json" \
   -d '{"to_user":"payer_sys_id","amount":30.00,"date":"2025-06-02","payment_method":"cash"}'
 
 # 7. Verify updated balances
-curl -s $AUTH "$SN/api/x_split/groups/$GROUP_ID/balances"
+curl -s $AUTH "$SN$API_BASE/groups/$GROUP_ID/balances"
 # → User B's balance drops to $0, payer's balance reduces by $30
 
 # 8. Security check: non-member gets 403
-curl -s $AUTH "$SN/api/x_split/groups/$GROUP_ID/balances"
+curl -s $AUTH "$SN$API_BASE/groups/$GROUP_ID/balances"
 # (if called by someone not in the group)
 # → 403 Forbidden
 ```
@@ -193,46 +205,86 @@ A Personal Developer Instance (PDI) is a free ServiceNow sandbox for development
 - A ServiceNow PDI (e.g., `https://dev123456.service-now.com`)
 - Admin credentials for the instance
 - Node.js >= 20
-- The ServiceNow CLI (`@servicenow/sdk`)
-- The ServiceNow **REST API Explorer** plugin installed on your instance (optional, for testing)
 
-### Step 1: Install the ServiceNow CLI
+### Overview
+
+Deployment is a two-step process:
+
+1. **One-time bootstrap** — run `setup-bg-script.js` in the ServiceNow Background Scripts UI to create tables, fields, choices, API definition, and all REST operations via server-side `GlideRecord` (bypasses PDI business rules that block REST API creation of `sys_db_object` and `sys_ws_operation`).
+2. **Deploy updates** — run `deploy.js` to update script includes and patch operation scripts with the latest code (idempotent, safe to re-run).
+
+### Step 1: Install Node dependencies
 
 ```bash
-# Already in the project dependencies; install from root
 npm install
+cd frontend && npm install && cd ..
 ```
 
-### Step 2: Configure instance credentials
+### Step 2: One-time bootstrap (Background Script)
 
-Set your PDI credentials as environment variables or pass them directly:
+PDIs restrict REST API operations on `sys_db_object`, `sys_dictionary`, and some `sys_ws_operation` records. The bootstrap runs as a server-side script via ServiceNow's Background Scripts UI, using `GlideRecord` directly to bypass these restrictions.
+
+1. Open your instance: `https://dev123456.service-now.com`
+2. Navigate to **System Definition → Scripts – Background** (or visit `/sys.scripts_background.do`)
+3. Open `setup-bg-script.js` from the project root
+4. Copy the entire file contents
+5. Paste into the Script field
+6. Click **Run script**
+7. Check the **System Log** (`/syslog.do`) for output lines prefixed with `=== Split App Bootstrap ===`
+
+The bootstrap creates:
+- Application (`x_split` scope)
+- 5 custom tables: `x_split_group`, `x_split_membership`, `x_split_expense`, `x_split_share`, `x_split_settlement`
+- All dictionary fields and choice records
+- Web service definition (`split_api`)
+- All 13 REST API operations
+
+### Step 3: Deploy script includes and API updates
+
+After the bootstrap completes, run `deploy.js` to upload the latest business logic and operation scripts:
 
 ```bash
-export SN_INSTANCE=https://dev123456.service-now.com
-export SN_USERNAME=admin
-export SN_PASSWORD=your-admin-password
+node deploy.js https://dev123456.service-now.com admin your-password
 ```
 
-### Step 3: Deploy the backend artifacts
+Or via npm:
 
 ```bash
-npm run deploy
-# This runs: snc deploy sn/
+npm run deploy -- https://dev123456.service-now.com admin your-password
 ```
 
-This deploys all artifacts from `sn/`:
-- **Custom tables**: `x_split_group`, `x_split_membership`, `x_split_expense`, `x_split_share`, `x_split_settlement`
-- **Business logic**: `SplitUtils`, `BalanceCalculator`, `ExpenseManager`, `SettlementProcessor`
-- **REST API**: All endpoints under `/api/x_split`
+What gets updated:
+- **Script includes**: `SplitUtils`, `BalanceCalculator`, `ExpenseManager`, `SettlementProcessor`, `SetupApp`
+- **Web service definition**: `split_api` (path, active flag)
+- **REST operations**: Scripts for all 13 endpoints
 
-### Step 4: Set up application scope access
+This step is **idempotent** — re-running it patches existing records without duplication.
 
-After deploying, the application scope `x_split` is installed. For the REST API to be accessible:
+### Step 4: Verify the REST API
 
-1. Navigate to your instance: `https://dev123456.service-now.com`
-2. Go to **System Web Services → REST API Explorer**
-3. Verify the `x_split` API appears under **Custom APIs**
-4. Or go to **Application Files → All** and search for `split_api` to confirm it's active
+`deploy.js` automatically discovers the `base_uri` from the web service definition. It prints the API base path at the end. Use it to test:
+
+```bash
+curl -s --user admin:your-password \
+  "https://dev123456.service-now.com/api/{instance_id}/x_split/user/dashboard"
+```
+
+Or discover it dynamically:
+
+```bash
+API_BASE=$(curl -s --user admin:your-password \
+  "https://dev123456.service-now.com/api/now/table/sys_ws_definition?sysparm_query=name=split_api&sysparm_fields=base_uri" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['base_uri'])")
+
+curl -s --user admin:your-password \
+  "https://dev123456.service-now.com$API_BASE/user/dashboard"
+```
+
+Expected response (with your session user):
+
+```json
+{"user_id":"...","groups":[],"totals":{"you_are_owed":"0.00","you_owe":"0.00"}}
+```
 
 ### Step 5: Deploy the frontend
 
@@ -243,53 +295,52 @@ cd frontend
 VITE_SN_INSTANCE=https://dev123456.service-now.com npm run dev
 ```
 
-Open `http://localhost:5173` in your browser. Login to your PDI in another tab first so the session cookie is available.
+Open `http://localhost:5173` in your browser. Log in to your PDI in another tab first so the session cookie is available.
 
-**Option B: Deploy static files to ServiceNow**
+**Option B: Deploy as a UI Page (single-file build)**
 
-Build the frontend and upload to your instance:
+The Vite build is configured with `vite-plugin-singlefile` to produce a single self-contained `index.html` with all CSS and JS inlined. A wrapper script then packages it in a Jelly CDATA block so ServiceNow's UI Page editor accepts it.
 
 ```bash
-cd frontend
-npm run build
-# Creates dist/ with index.html + assets
+# Build the single-file HTML and wrap in Jelly/CDATA
+cd frontend && npm run build:ui-page
 ```
 
-Then create a **UI Page** on your instance:
+The output is `frontend/dist/ui-page.xml`. Create a **UI Page** on your instance:
 
 1. Navigate to **System UI → UI Pages**
 2. Click **New**
 3. Set **Name** to `split_app`
-4. Set **Direct** to `true` (no processing)
-5. Set **HTML** to the contents of `frontend/dist/index.html`
-   - Update asset paths: replace `./assets/` with `split_app/assets/`
-6. Upload the contents of `frontend/dist/` as related assets using the **Assets** related list
-7. Access at: `https://dev123456.service-now.com/split_app.do`
+4. Check **Direct** (to bypass Jelly processing)
+5. Set **Role** to `user` (accessible to all authenticated users)
+6. Set **HTML** to the full contents of `frontend/dist/ui-page.xml`
+7. Click **Submit**
+8. Access at: `https://dev123456.service-now.com/split_app.do`
 
 **Option C: Serve via Service Portal**
 
 1. Go to **Service Portal → Widgets**
 2. Create a new widget and embed the Lit app as a single-page widget
 
-### Step 6: Verify the deployment
+### Step 6: Verify the full app
 
-1. Open your browser and navigate to the app
-2. Go to **Groups** and create a new group
-3. Add other users (you can find their sys_ids in **User Administration → Users**)
+1. Open the app (dev server, UI Page, or Service Portal)
+2. Create a group
+3. Add other users (find their sys_ids in **User Administration → Users**)
 4. Add an expense with an equal split
 5. Check the balances
 6. Record a settlement
 7. Verify the dashboard shows correct totals
 
-### Step 7: Configure the frontend for production
+### Re-deploying after code changes
 
-For production use on your PDI, update `frontend/src/services/api.ts`:
+When you modify script includes or operation scripts, just run step 3 again:
 
-```typescript
-const BASE = "/api/x_split";
-// No changes needed — the browser uses the ServiceNow session
-// when served from the same origin as the instance
+```bash
+npm run deploy -- https://dev123456.service-now.com admin your-password
 ```
+
+The bootstrap (step 2) only needs to be run once per instance.
 
 ## Acceptance Criteria Walkthrough
 
@@ -317,12 +368,16 @@ All custom tables are scoped to `x_split` (no global table modifications). The `
 ## Troubleshooting
 
 | Issue | Solution |
-|---|---|
+|---|---|---|
 | `403 Forbidden` on API calls | Ensure the user session is valid and the user is a member of the group |
-| `Cannot find module @servicenow/sdk` | Run `npm install` from the root directory |
-| Vite proxy not forwarding | Check `VITE_SN_INSTANCE` is set and the instance is accessible |
-| Tables not appearing after deploy | Check the instance is running the expected app scope version under **System Applications → My Company Applications** |
+| Vite proxy not forwarding | Check `VITE_SN_INSTANCE` and `VITE_SN_INSTANCE_ID` are set and the instance is accessible |
+| Tables not appearing after bootstrap | Check the System Log (`/syslog.do`) for bootstrap errors. Re-run the Background Script if needed |
+| `deploy.js` fails with 403 on operations | The bootstrap (step 2) must be run first. Re-run it, then re-run deploy.js |
+| API returns `Requested URI does not represent any resource` | The bootstrap hasn't created the REST API yet, or the app scope wasn't created. Re-run the Background Script |
+| REST API field `script` set but not applied | The REST API field name for `sys_ws_operation.script` is **`operation_script`**, not `script`. `deploy.js` now uses the correct field name |
+| `sys_scope` pointing to wrong record | On metadata tables (`sys_db_object`, `sys_dictionary`, etc.), `sys_scope` must reference the **`sys_scope`** record, not the `sys_app` record. The background script now resolves `SCOPE_SYS_ID` correctly |
 | Settlement fails with "exceeds outstanding balance" | The settlement amount is larger than the net balance; check `GET /groups/{groupId}/balances` first |
+| `sys_app` API returns empty results | Some PDIs block `sys_app` table reads via REST API. The background script avoids this by using server-side `GlideRecord` |
 
 ## Data Model
 

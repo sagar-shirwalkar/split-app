@@ -5,7 +5,7 @@
     "dev": "concurrently \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
-    "deploy": "snc deploy sn/ --instance https://YOUR_INSTANCE.service-now.com --username admin --password yourpassword"
+    "deploy": "node deploy.js"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

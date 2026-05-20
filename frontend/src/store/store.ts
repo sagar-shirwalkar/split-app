@@ -1,5 +1,5 @@
 import { ReactiveController, ReactiveControllerHost } from "lit";
-import { apiGet, apiPost, apiPut, apiDelete } from "../services/api.js";
+import { apiGet, apiPost, apiPut, apiDelete, discoverApiBase } from "../services/api.js";
 
 export interface Group {
   sys_id: string;
@@ -63,7 +63,8 @@ export class StoreController implements ReactiveController {
     host.addController(this);
   }
 
-  hostConnected() {
+  async hostConnected() {
+    await discoverApiBase();
     this.loadDashboard();
   }
 

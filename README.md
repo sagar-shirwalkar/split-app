@@ -219,21 +219,21 @@ A Personal Developer Instance (PDI) is a free ServiceNow sandbox for development
 - Admin credentials for the instance
 - Node.js >= 20
 
-### Overview
+### Deployment Method 1 : Deploy using the ServiceNow Background Scripts UI 
 
 Deployment is a two-step process:
 
 1. **One-time bootstrap** — run `setup-bg-script.js` in the ServiceNow Background Scripts UI to create tables, fields, choices, API definition, and all REST operations via server-side `GlideRecord` (bypasses PDI business rules that block REST API creation of `sys_db_object` and `sys_ws_operation`).
 2. **Deploy updates** — run `deploy.js` to update script includes and patch operation scripts with the latest code (idempotent, safe to re-run).
 
-### Step 1: Install Node dependencies
+#### Step 1: Install Node dependencies
 
 ```bash
 npm install
 cd frontend && npm install && cd ..
 ```
 
-### Step 2: One-time bootstrap (Background Script)
+#### Step 2: One-time bootstrap (Background Script)
 
 PDIs restrict REST API operations on `sys_db_object`, `sys_dictionary`, and some `sys_ws_operation` records. The bootstrap runs as a server-side script via ServiceNow's Background Scripts UI, using `GlideRecord` directly to bypass these restrictions.
 
@@ -252,7 +252,7 @@ The bootstrap creates:
 - Web service definition (`split_api`)
 - All 13 REST API operations
 
-### Step 3: Deploy script includes and API updates
+#### Step 3: Deploy script includes and API updates
 
 After the bootstrap completes, run `deploy.js` to upload the latest business logic and operation scripts:
 
@@ -273,7 +273,7 @@ What gets updated:
 
 This step is **idempotent** — re-running it patches existing records without duplication.
 
-### Step 4: Verify the REST API
+#### Step 4: Verify the REST API
 
 `deploy.js` automatically discovers the `base_uri` from the web service definition. It prints the API base path at the end. Use it to test:
 
@@ -299,7 +299,7 @@ Expected response (with your session user):
 {"user_id":"...","groups":[],"totals":{"you_are_owed":"0.00","you_owe":"0.00"}}
 ```
 
-### Step 5: Deploy the frontend
+#### Step 5: Deploy the frontend
 
 **Option A: Serve from Vite dev server (development)**
 
@@ -335,7 +335,7 @@ The output is `frontend/dist/ui-page.xml`. Create a **UI Page** on your instance
 1. Go to **Service Portal → Widgets**
 2. Create a new widget and embed the Lit app as a single-page widget
 
-### Step 6: Verify the full app
+#### Step 6: Verify the full app
 
 1. Open the app (dev server, UI Page, or Service Portal)
 2. Create a group
@@ -345,7 +345,7 @@ The output is `frontend/dist/ui-page.xml`. Create a **UI Page** on your instance
 6. Record a settlement
 7. Verify the dashboard shows correct totals
 
-### Re-deploying after code changes
+#### Re-deploying after code changes
 
 When you modify script includes or operation scripts, just run step 3 again:
 
@@ -355,7 +355,7 @@ npm run deploy -- https://dev123456.service-now.com admin your-password
 
 The bootstrap (step 2) only needs to be run once per instance.
 
-### Alternative: Deploy using @servicenow/sdk (now-sdk)
+### Deployment method 2 : Deploy using @servicenow/sdk (now-sdk)
 
 Instead of the Background Script + `deploy.js` workflow above, you can deploy the entire app using the ServiceNow SDK v4.6.1. The SDK compiles fluent TypeScript definitions (`.now.ts` files) into an installable package and deploys it via the Instance API — bypassing the REST API restrictions that caused earlier 403s.
 
@@ -412,6 +412,48 @@ The SDK build generates XML update-set records under `sn-sdk/dist/app/`:
 - **`sys_script_include`** — Business logic (SplitUtils, BalanceCalculator, ExpenseManager, SettlementProcessor)
 - **`sys_ws_definition`** — `split_api` REST API
 - **`sys_ws_operation`** — All 13 REST endpoints
+
+#### Step 5: Deploy the frontend (same as Method 1)
+
+After the backend is installed, deploy the Lit frontend as a UI Page. This step is identical for both deployment methods.
+
+**Option A: Serve from Vite dev server (development)**
+
+```bash
+cd frontend
+VITE_SN_INSTANCE=https://dev123456.service-now.com npm run dev
+```
+
+Open `http://localhost:5173` in your browser. Log in to your PDI in another tab first so the session cookie is available.
+
+**Option B: Deploy as a UI Page (single-file build)**
+
+The Vite build uses `vite-plugin-singlefile` to produce a single self-contained `index.html` with all CSS and JS inlined. A wrapper script packages it in a Jelly CDATA block for ServiceNow's UI Page editor.
+
+```bash
+cd frontend && npm run build:ui-page
+```
+
+The output is `frontend/dist/ui-page.xml`. Create a **UI Page** on your instance:
+
+1. Navigate to **System UI → UI Pages**
+2. Click **New**
+3. Set **Name** to `split_app`
+4. Check **Direct** (to bypass Jelly processing)
+5. Set **Role** to `user` (accessible to all authenticated users)
+6. Set **HTML** to the full contents of `frontend/dist/ui-page.xml`
+7. Click **Submit**
+8. Access at: `https://dev123456.service-now.com/split_app.do`
+
+#### Step 6: Verify the full app
+
+1. Open the app (dev server or UI Page at `/split_app.do`)
+2. Create a group
+3. Add other users (find their sys_ids in **User Administration → Users**)
+4. Add an expense with an equal split
+5. Check the balances
+6. Record a settlement
+7. Verify the dashboard shows correct totals
 
 #### Re-deploying after code changes
 

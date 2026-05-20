@@ -239,7 +239,7 @@ PDIs restrict REST API operations on `sys_db_object`, `sys_dictionary`, and some
 
 1. Open your instance: `https://dev123456.service-now.com`
 2. Navigate to **System Definition → Scripts – Background** (or visit `/sys.scripts_background.do`)
-3. Open `setup-bg-script.js` from the project root
+3. Open `setup-bg-script.js` from the project root (this often proves to be too big for the GUI so you may use `setup-bg-script.min.js`)
 4. Copy the entire file contents
 5. Paste into the Script field
 6. Click **Run script**

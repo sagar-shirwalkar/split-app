@@ -496,7 +496,7 @@ All custom tables are scoped to `x_split` (no global table modifications). The `
 ## Troubleshooting
 
 | Issue | Solution |
-|---|---|---|
+|---|---|
 | `403 Forbidden` on API calls | Ensure the user session is valid and the user is a member of the group |
 | Vite proxy not forwarding | Check `VITE_SN_INSTANCE` and `VITE_SN_INSTANCE_ID` are set and the instance is accessible |
 | Tables not appearing after bootstrap | Check the System Log (`/syslog.do`) for bootstrap errors. Re-run the Background Script if needed |

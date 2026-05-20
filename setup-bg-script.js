@@ -63,6 +63,8 @@
   }
 
   // Fields
+  // Note: sys_dictionary.name = table name, sys_dictionary.element = field name
+  // On newer ServiceNow versions, sys_db_object field doesn't exist on sys_dictionary
   var fieldDefs = {
     x_split_group: [
       { n: "name", t: "string", ml: 255, man: true },
@@ -110,8 +112,8 @@
     for (var fi = 0; fi < fieldDefs[tn].length; fi++) {
       var fd = fieldDefs[tn][fi];
       var ex = new GlideRecord("sys_dictionary");
-      ex.addQuery("name", fd.n);
-      ex.addQuery("sys_db_object", tableId);
+      ex.addQuery("name", tn);
+      ex.addQuery("element", fd.n);
       ex.query();
       if (ex.next()) {
         results.fields.push({ name: tn + "." + fd.n, status: "exists" });
@@ -119,9 +121,9 @@
       }
       var fgr = new GlideRecord("sys_dictionary");
       fgr.initialize();
-      fgr.name = fd.n;
+      fgr.name = tn;
+      fgr.element = fd.n;
       fgr.sys_scope = SCOPE_SYS_ID;
-      fgr.sys_db_object = tableId;
       fgr.active = true;
       fgr.internal_type = fd.t;
       if (fd.man) fgr.mandatory = true;
@@ -135,6 +137,7 @@
   }
 
   // Choices
+  // Note: sys_choice.name = table name, sys_choice.element = field name (same pattern as sys_dictionary)
   var choiceDefs = [
     { t: "x_split_group", e: "base_currency", v: ["USD", "EUR", "INR", "GBP"] },
     { t: "x_split_expense", e: "category", v: ["Food & Drink", "Travel", "Utilities", "Entertainment", "Other"] },
@@ -146,7 +149,7 @@
     var cd = choiceDefs[ci];
     for (var vi = 0; vi < cd.v.length; vi++) {
       var cex = new GlideRecord("sys_choice");
-      cex.addQuery("table", cd.t);
+      cex.addQuery("name", cd.t);
       cex.addQuery("element", cd.e);
       cex.addQuery("value", cd.v[vi]);
       cex.query();
@@ -157,8 +160,7 @@
       var cgr = new GlideRecord("sys_choice");
       cgr.initialize();
       cgr.sys_scope = SCOPE_SYS_ID;
-      cgr.name = cd.e;
-      cgr.table = cd.t;
+      cgr.name = cd.t;
       cgr.element = cd.e;
       cgr.value = cd.v[vi];
       cgr.label = cd.v[vi];
@@ -173,11 +175,14 @@
   if (!wsdGr.get("name", "split_api")) {
     wsdGr.initialize();
     wsdGr.name = "split_api";
+    wsdGr.service_id = "x_split";
     wsdGr.api_path = "x_split";
     wsdGr.active = true;
     wsdGr.sys_scope = SCOPE_SYS_ID;
     results.ws_def = { status: "created", sys_id: wsdGr.insert() };
   } else {
+    wsdGr.service_id = "x_split";
+    wsdGr.update();
     results.ws_def = { status: "exists", sys_id: wsdGr.getUniqueValue() };
   }
   var WSDEF_SYS_ID = results.ws_def.sys_id;

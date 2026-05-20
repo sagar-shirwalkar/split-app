@@ -44,7 +44,8 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 | **Backend** | ServiceNow scoped application (scope `x_split`) |
 | **Data** | Custom ServiceNow tables — `x_split_group`, `x_split_membership`, `x_split_expense`, `x_split_share`, `x_split_settlement` |
 | **API** | ServiceNow REST API with Script Includes for business logic |
-| **Deployment** | `deploy.js` (Node.js) + `setup-bg-script.js` (ServiceNow Background Script) |
+| **Deployment (Background Script)** | `setup-bg-script.js` (GlideRecord) + `deploy.js` (Node.js) |
+| **Deployment (SDK)** | `@servicenow/sdk` v4.6.1 — fluent TypeScript (`sn-sdk/`) → `now-sdk build && now-sdk install` |
 
 ## Project Structure
 
@@ -69,12 +70,24 @@ split-app/
 │   └── package.json
 ├── setup-bg-script.js            # One-time bootstrap (run in ServiceNow Background Scripts)
 ├── deploy.js                     # Deploy/update script includes and API
-├── sn/                           # ServiceNow backend artifacts
+├── sn/                           # ServiceNow backend artifacts (JSON)
 │   ├── app.json
 │   ├── sys_db_object/           # Custom table definitions
 │   ├── sys_script_include/      # Business logic
 │   ├── sys_ws_definition/       # REST API definition
 │   └── sys_ws_operation/        # Per-endpoint scripts
+├── sn-sdk/                       # @servicenow/sdk fluent project (alternative deployment)
+│   ├── now.config.json
+│   ├── package.json
+│   ├── src/
+│   │   ├── fluent/
+│   │   │   ├── index.now.ts     # Entry point
+│   │   │   ├── tables/          # Fluent table definitions
+│   │   │   ├── script-includes/ # Fluent ScriptInclude wrappers
+│   │   │   └── rest-apis/       # Fluent REST API definition
+│   │   └── server/
+│   │       └── script-includes/ # Server-side JS (copied from sn/)
+│   └── tsconfig.json
 └── package.json                 # Monorepo scripts
 ```
 
@@ -341,6 +354,79 @@ npm run deploy -- https://dev123456.service-now.com admin your-password
 ```
 
 The bootstrap (step 2) only needs to be run once per instance.
+
+### Alternative: Deploy using @servicenow/sdk (now-sdk)
+
+Instead of the Background Script + `deploy.js` workflow above, you can deploy the entire app using the ServiceNow SDK v4.6.1. The SDK compiles fluent TypeScript definitions (`.now.ts` files) into an installable package and deploys it via the Instance API — bypassing the REST API restrictions that caused earlier 403s.
+
+**Prerequisites:** Same as above (Node.js >= 20, admin creds, PDI accessible).
+
+#### Step 1: Set up the SDK project
+
+The `sn-sdk/` directory contains all the fluent definitions. Install dependencies:
+
+```bash
+cd sn-sdk && npm install
+```
+
+#### Step 2: Authenticate to your instance
+
+```bash
+# Add credentials (stored in .now-sdk/, gitignored)
+npx now-sdk auth --add https://dev123456.service-now.com --type basic
+```
+
+Alternatively, set environment variables (for CI/CD):
+
+```bash
+export SN_SDK_INSTANCE_URL=https://dev123456.service-now.com
+export SN_SDK_USER=admin
+export SN_SDK_USER_PWD='your-password-with-percent%sign'
+```
+
+#### Step 3: Configure scope ID
+
+The `now.config.json` uses a placeholder `scopeId` (32-char hex). On first install, the SDK creates a new scope on the instance and auto-generates the sys_id. After the first successful install, update `scopeId` in `now.config.json` with the sys_id from `sys_scope` on your instance.
+
+#### Step 4: Build and install
+
+```bash
+npm run deploy
+```
+
+Or step by step:
+
+```bash
+npx now-sdk build     # Compile fluent .now.ts → dist/app/ (XML metadata)
+npx now-sdk install   # Push built package to the instance
+```
+
+#### What gets created
+
+The SDK build generates XML update-set records under `sn-sdk/dist/app/`:
+
+- **`sys_app`** — The scoped application
+- **`sys_db_object`** — 5 custom tables
+- **`sys_dictionary`** — All fields
+- **`sys_choice`** — Choice records for dropdowns
+- **`sys_script_include`** — Business logic (SplitUtils, BalanceCalculator, ExpenseManager, SettlementProcessor)
+- **`sys_ws_definition`** — `split_api` REST API
+- **`sys_ws_operation`** — All 13 REST endpoints
+
+#### Re-deploying after code changes
+
+Modify the fluent `.now.ts` files or the server-side `.server.js` files, then re-run:
+
+```bash
+cd sn-sdk && npx now-sdk build && npx now-sdk install
+```
+
+#### Known SDK limitations
+
+- The `scopeId` in `now.config.json` must match the instance's scope sys_id after first install
+- Table definitions use `referenceTable: "table_name" as const` for type safety — the `as const` assertion is required
+- Each REST API route requires a unique `$id` key defined in `src/keys.now.ts`
+- Script includes reference external `.server.js` files via `Now.include()`
 
 ## Acceptance Criteria Walkthrough
 

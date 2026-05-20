@@ -1,0 +1,15 @@
+{
+  "name": "split-app-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "now-sdk build",
+    "deploy": "now-sdk build && now-sdk install"
+  },
+  "dependencies": {
+    "@servicenow/sdk": "^4.6.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

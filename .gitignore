@@ -1,3 +1,7 @@
 node_modules
 dist
 .env
+
+# SDK build artifacts (instance-specific metadata, packaged zips)
+sn-sdk/target/
+sn-sdk/.now/

@@ -372,21 +372,57 @@ cd sn-sdk && npm install
 #### Step 2: Authenticate to your instance
 
 ```bash
-# Add credentials (stored in .now-sdk/, gitignored)
+# Add credentials (stored in ~/.config/@servicenow/now-sdk/, gitignored)
 npx now-sdk auth --add https://dev123456.service-now.com --type basic
+# You'll be prompted for alias, username, and password
 ```
 
-Alternatively, set environment variables (for CI/CD):
+> If you change your PDI password later, re-run `now-sdk auth --add` with the same URL to overwrite stored credentials.
+
+**Environment variables (alternative, good for CI/CD):**  
+All variables must be set in the **same shell session** as the deploy command. Single-quote the password to prevent shell interpretation of special characters:
+
+```bash
+cd sn-sdk && SN_SDK_INSTANCE_URL=https://dev123456.service-now.com SN_SDK_USER=admin SN_SDK_USER_PWD='your-password-with-percent%sign' npm run deploy
+```
+
+Or export them beforehand:
 
 ```bash
 export SN_SDK_INSTANCE_URL=https://dev123456.service-now.com
 export SN_SDK_USER=admin
 export SN_SDK_USER_PWD='your-password-with-percent%sign'
+cd sn-sdk && npm run deploy
 ```
 
 #### Step 3: Configure scope ID
 
-The `now.config.json` uses a placeholder `scopeId` (32-char hex). On first install, the SDK creates a new scope on the instance and auto-generates the sys_id. After the first successful install, update `scopeId` in `now.config.json` with the sys_id from `sys_scope` on your instance.
+The `now.config.json` uses a placeholder `scopeId` (32-char hex). On **first install**, the SDK creates a new scope on the instance and the placeholder is replaced with the instance-generated sys_id.
+
+**When you delete the app from Studio** (e.g., to start fresh), the `scopeId` in `now.config.json` becomes stale — it no longer matches any record on the instance. The SDK install will fail with:
+
+```
+ERROR: Exception occurred while installing application
+Unable to install application as application was null
+```
+
+To fix this, generate a fresh GUID, update the config, clean stale build artifacts, and reinstall:
+
+```bash
+# Generate a new 32-char hex GUID (no hyphens)
+SCOPE_ID=$(python3 -c "import uuid; print(uuid.uuid4().hex)")
+
+# Update now.config.json with the new scopeId
+sed -i '' "s/\"scopeId\": \".*\"/\"scopeId\": \"$SCOPE_ID\"/" now.config.json
+
+# Clean stale build artifacts (contain the old GUID)
+rm -rf .now/ dist/app/
+
+# Rebuild and install
+npx now-sdk build && npx now-sdk install
+```
+
+> **Note:** The `scopeId` in `now.config.json` is unique to your instance. Do not share it between instances. After a successful install, you can find the actual value in the `sys_scope` table on your instance.
 
 #### Step 4: Build and install
 
@@ -465,10 +501,11 @@ cd sn-sdk && npx now-sdk build && npx now-sdk install
 
 #### Known SDK limitations
 
-- The `scopeId` in `now.config.json` must match the instance's scope sys_id after first install
+- The `scopeId` in `now.config.json` must be a valid 32-char hex GUID. On first install the SDK creates the scope; if you later delete the app from Studio, this GUID becomes stale and must be regenerated (see [Step 3](#step-3-configure-scope-id))
 - Table definitions use `referenceTable: "table_name" as const` for type safety — the `as const` assertion is required
 - Each REST API route requires a unique `$id` key defined in `src/keys.now.ts`
 - Script includes reference external `.server.js` files via `Now.include()`
+- SDK stored credentials are in `~/.config/@servicenow/now-sdk/`; update them with `now-sdk auth --add` after changing your PDI password
 
 ## Acceptance Criteria Walkthrough
 
@@ -506,6 +543,7 @@ All custom tables are scoped to `x_split` (no global table modifications). The `
 | `sys_scope` pointing to wrong record | On metadata tables (`sys_db_object`, `sys_dictionary`, etc.), `sys_scope` must reference the **`sys_scope`** record, not the `sys_app` record. The background script now resolves `SCOPE_SYS_ID` correctly |
 | Settlement fails with "exceeds outstanding balance" | The settlement amount is larger than the net balance; check `GET /groups/{groupId}/balances` first |
 | `sys_app` API returns empty results | Some PDIs block `sys_app` table reads via REST API. The background script avoids this by using server-side `GlideRecord` |
+| SDK install: `Unable to install application as application was null` | The `scopeId` in `sn-sdk/now.config.json` is stale (e.g., after deleting the app from Studio). Generate a fresh GUID, update the config, delete `dist/app/`, and rebuild — see [Method 2, Step 3](#step-3-configure-scope-id) |
 
 ## Data Model
 

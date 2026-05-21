@@ -1,6 +1,6 @@
 {
-  "scope": "x_split",
-  "scopeId": "b61b195816706e167fbd0cd542d7f9b5",
+  "scope": "x_2053373_split",
+  "scopeId": "18e284145d03460d9a4c73fed367f5ab",
   "name": "Split App",
   "tsconfigPath": "./src/server/tsconfig.json"
 }

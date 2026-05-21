@@ -1,13 +1,13 @@
 import { Table, ReferenceColumn, DecimalColumn, IntegerColumn, BooleanColumn } from "@servicenow/sdk/core";
 
-export const x_split_share = Table({
+export const x_2053373_split_share = Table({
   $id: Now.ID["split-table-share"],
-  name: "x_split_share",
+  name: "x_2053373_split_share",
   label: "Expense Share",
   schema: {
     expense: ReferenceColumn({
       label: "Expense",
-      referenceTable: "x_split_expense" as const,
+      referenceTable: "x_2053373_split_expense" as const,
       mandatory: true,
     }),
     user: ReferenceColumn({

@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "build": "now-sdk build",
-    "deploy": "now-sdk build && now-sdk install"
+    "deploy": "now-sdk build && now-sdk install",
+    "build:frontend": "node scripts/build-frontend.cjs",
+    "build:all": "node scripts/build-frontend.cjs && now-sdk build",
+    "deploy:all": "node scripts/build-frontend.cjs && now-sdk build && now-sdk install"
   },
   "dependencies": {
-    "@servicenow/sdk": "^4.6.1"
+    "@servicenow/sdk": "^4.7.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

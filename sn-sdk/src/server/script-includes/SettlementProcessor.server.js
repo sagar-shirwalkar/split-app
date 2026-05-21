@@ -25,7 +25,7 @@ SettlementProcessor.prototype = {
       );
     }
 
-    var shareGr = new GlideRecord("x_split_share");
+    var shareGr = new GlideRecord("x_2053373_split_share");
     shareGr.addQuery("expense.group", settlementData.group);
     shareGr.addQuery("user", settlementData.from_user);
     shareGr.addQuery("expense.payer", settlementData.to_user);
@@ -46,7 +46,7 @@ SettlementProcessor.prototype = {
       shareGr.update();
     }
 
-    var settGr = new GlideRecord("x_split_settlement");
+    var settGr = new GlideRecord("x_2053373_split_settlement");
     settGr.initialize();
     settGr.group = settlementData.group;
     settGr.from_user = settlementData.from_user;

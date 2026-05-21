@@ -6,6 +6,6 @@ ScriptInclude({
   active: true,
   clientCallable: false,
   accessibleFrom: "public",
-  apiName: "x_split.SettlementProcessor",
+  apiName: "x_2053373_split.SettlementProcessor",
   script: Now.include("../../server/script-includes/SettlementProcessor.server.js"),
 });

@@ -45,7 +45,7 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 | **Data** | Custom ServiceNow tables — `x_split_group`, `x_split_membership`, `x_split_expense`, `x_split_share`, `x_split_settlement` |
 | **API** | ServiceNow REST API with Script Includes for business logic |
 | **Deployment (Background Script)** | `setup-bg-script.js` (GlideRecord) + `deploy.js` (Node.js) |
-| **Deployment (SDK)** | `@servicenow/sdk` v4.6.1 — fluent TypeScript (`sn-sdk/`) → `now-sdk build && now-sdk install` |
+| **Deployment (SDK)** | `@servicenow/sdk` v4.7.0 — fluent TypeScript (`sn-sdk/`) → `now-sdk build && now-sdk install` |
 
 ## Project Structure
 
@@ -357,103 +357,132 @@ The bootstrap (step 2) only needs to be run once per instance.
 
 ### Deployment method 2 : Deploy using @servicenow/sdk (now-sdk)
 
-Instead of the Background Script + `deploy.js` workflow above, you can deploy the entire app using the ServiceNow SDK v4.6.1. The SDK compiles fluent TypeScript definitions (`.now.ts` files) into an installable package and deploys it via the Instance API — bypassing the REST API restrictions that caused earlier 403s.
+The ServiceNow SDK compiles fluent TypeScript definitions (`.now.ts` files) into an installable package and deploys it to your instance. This method is faster than Method 1 for repeat deployments but has additional server-side prerequisites.
 
-**Prerequisites:** Same as above (Node.js >= 20, admin creds, PDI accessible).
+**When to use Method 2 vs Method 1:**
 
-#### Step 1: Set up the SDK project
+| Factor | Method 2 (SDK) | Method 1 (Background Script) |
+|--------|----------------|------------------------------|
+| First-time setup | Requires plugin checks | Just paste and run |
+| Re-deploy speed | `now-sdk build && install` in seconds | `deploy.js` in seconds |
+| Server requirements | Needs `sn_glider` + `sn_appclient` plugins | Works on any PDI |
+| Instance compatibility | Washington DC — Australia (v4.x) | Any release |
+| Scope prefix restriction | Must match `glide.appcreator.company.code` | No restriction |
 
-The `sn-sdk/` directory contains all the fluent definitions. Install dependencies:
+#### Prerequisites
+
+- Node.js >= 20, admin credentials for the PDI
+- **ServiceNow IDE plugin** (`sn_glider`) v4.1.1+ installed on the instance ([ServiceNow Store](https://store.servicenow.com/sn_appstore_store.do#!/store/help?article=com.servicenow.ide))
+- **Scoped App Client** (`sn_appclient`) v29.0.4+ active on the instance
+- The app scope prefix must match your PDI's `glide.appcreator.company.code` (handled automatically by `setup-scope.js`)
+
+#### Pre-flight verification
+
+Run these checks on your instance to confirm compatibility before using the SDK:
+
+**1. Check the release — SDK v4.x requires Washington DC or later**
+
+```sql
+-- sys_properties: `glide.product.version`
+-- Should show `Washington DC`, `Xanadu`, `Australia`, or later
+```
+
+**2. Verify the ServiceNow IDE plugin is installed**
+
+Navigate to **System Applications → All Available Applications** (or `sys_store_app.do`) and search for `ServiceNow IDE`. The version must be 4.1.1 or later.
+
+If it's not installed, download it from the [ServiceNow Store](https://store.servicenow.com/sn_appstore_store.do#!/store/help?article=com.servicenow.ide).
+
+**3. Verify the Scoped App Client is active**
+
+```sql
+-- Via REST:
+GET /api/now/table/sys_plugins?sysparm_query=name=com.glide.appclient
+
+-- Or navigate to System Applications → Plugins and search for "Scoped App Client"
+```
+
+If not active, activate the **Scoped App Client** plugin (`com.glide.appclient`).
+
+#### Step 1: Run the scope setup script
+
+The scope prefix must match your PDI's `glide.appcreator.company.code` property. Run `setup-scope.js` to detect the company code and rename all `x_split` references to `x_{company_code}_split` across source files:
+
+```bash
+node scripts/setup-scope.js https://dev123456.service-now.com admin 'your-password'
+```
+
+This script:
+- Reads `glide.appcreator.company.code` from the instance via REST
+- Renames `x_split` → `x_{code}_split` in all `.now.ts`, `.server.js`, `sn/`, and config files
+- Regenerates a fresh `scopeId` in `now.config.json`
+
+> If the property is empty, the scope stays as `x_split` (no renaming needed).
+
+#### Step 2: Set up the SDK project
+
+Install SDK dependencies:
 
 ```bash
 cd sn-sdk && npm install
 ```
 
-#### Step 2: Authenticate to your instance
+#### Step 3: Authenticate (environment variables)
 
-```bash
-# Add credentials (stored in ~/.config/@servicenow/now-sdk/, gitignored)
-npx now-sdk auth --add https://dev123456.service-now.com --type basic
-# You'll be prompted for alias, username, and password
-```
-
-> If you change your PDI password later, re-run `now-sdk auth --add` with the same URL to overwrite stored credentials.
-
-**Environment variables (alternative, good for CI/CD):**  
-All variables must be set in the **same shell session** as the deploy command. Single-quote the password to prevent shell interpretation of special characters:
-
-```bash
-cd sn-sdk && SN_SDK_INSTANCE_URL=https://dev123456.service-now.com SN_SDK_USER=admin SN_SDK_USER_PWD='your-password-with-percent%sign' npm run deploy
-```
-
-Or export them beforehand:
+The `now-sdk auth --add` interactive prompt may not work well in all shells. Use environment variables instead:
 
 ```bash
 export SN_SDK_INSTANCE_URL=https://dev123456.service-now.com
 export SN_SDK_USER=admin
-export SN_SDK_USER_PWD='your-password-with-percent%sign'
-cd sn-sdk && npm run deploy
+export SN_SDK_USER_PWD='your-password'
 ```
 
-#### Step 3: Configure scope ID
+Single-quote the password to prevent shell interpretation of special characters.
 
-The `now.config.json` uses a placeholder `scopeId` (32-char hex). On **first install**, the SDK creates a new scope on the instance and the placeholder is replaced with the instance-generated sys_id.
+#### Step 4: Build and install (frontend + backend)
 
-**When you delete the app from Studio** (e.g., to start fresh), the `scopeId` in `now.config.json` becomes stale — it no longer matches any record on the instance. The SDK install will fail with:
-
-```
-ERROR: Exception occurred while installing application
-Unable to install application as application was null
-```
-
-To fix this, generate a fresh GUID, update the config, clean stale build artifacts, and reinstall:
+The `deploy:all` command builds the frontend into a single-file HTML, compiles the SDK fluent definitions, and installs everything (tables, APIs, script includes, AND the UiPage) in one step:
 
 ```bash
-# Generate a new 32-char hex GUID (no hyphens)
-SCOPE_ID=$(python3 -c "import uuid; print(uuid.uuid4().hex)")
-
-# Update now.config.json with the new scopeId
-sed -i '' "s/\"scopeId\": \".*\"/\"scopeId\": \"$SCOPE_ID\"/" now.config.json
-
-# Clean stale build artifacts (contain the old GUID)
-rm -rf .now/ dist/app/
-
-# Rebuild and install
-npx now-sdk build && npx now-sdk install
+cd sn-sdk
+npm run deploy:all       # builds frontend → SDK build → install
 ```
 
-> **Note:** The `scopeId` in `now.config.json` is unique to your instance. Do not share it between instances. After a successful install, you can find the actual value in the `sys_scope` table on your instance.
-
-#### Step 4: Build and install
+Or run the steps individually:
 
 ```bash
-npm run deploy
+cd sn-sdk
+npm run build:frontend  # build Lit app → src/client/ui-page.html
+npx now-sdk build       # compile fluent .now.ts → dist/app/
+npx now-sdk install     # push to instance
 ```
 
-Or step by step:
+If successful, you'll see:
 
-```bash
-npx now-sdk build     # Compile fluent .now.ts → dist/app/ (XML metadata)
-npx now-sdk install   # Push built package to the instance
 ```
+[now-sdk] Installation completed. Access the application at:
+  https://dev123456.service-now.com/sys_app.do?sys_id=<app_sys_id>
+```
+
+The frontend is deployed as a UI Page accessible at `https://dev123456.service-now.com/x_{scope}_split_app.do`.
 
 #### What gets created
 
-The SDK build generates XML update-set records under `sn-sdk/dist/app/`:
+The SDK build generates XML metadata under `sn-sdk/dist/app/`:
 
-- **`sys_app`** — The scoped application
+- **`sys_app`** — The scoped application record
+- **`sys_scope`** — The application scope
 - **`sys_db_object`** — 5 custom tables
 - **`sys_dictionary`** — All fields
 - **`sys_choice`** — Choice records for dropdowns
 - **`sys_script_include`** — Business logic (SplitUtils, BalanceCalculator, ExpenseManager, SettlementProcessor)
 - **`sys_ws_definition`** — `split_api` REST API
 - **`sys_ws_operation`** — All 13 REST endpoints
+- **`sys_ui_page`** — The frontend as a single-file Lit app
 
-#### Step 5: Deploy the frontend (same as Method 1)
+#### Step 5: Develop the frontend locally
 
-After the backend is installed, deploy the Lit frontend as a UI Page. This step is identical for both deployment methods.
-
-**Option A: Serve from Vite dev server (development)**
+Use the Vite dev server for rapid frontend development (no install needed):
 
 ```bash
 cd frontend
@@ -462,28 +491,9 @@ VITE_SN_INSTANCE=https://dev123456.service-now.com npm run dev
 
 Open `http://localhost:5173` in your browser. Log in to your PDI in another tab first so the session cookie is available.
 
-**Option B: Deploy as a UI Page (single-file build)**
-
-The Vite build uses `vite-plugin-singlefile` to produce a single self-contained `index.html` with all CSS and JS inlined. A wrapper script packages it in a Jelly CDATA block for ServiceNow's UI Page editor.
-
-```bash
-cd frontend && npm run build:ui-page
-```
-
-The output is `frontend/dist/ui-page.xml`. Create a **UI Page** on your instance:
-
-1. Navigate to **System UI → UI Pages**
-2. Click **New**
-3. Set **Name** to `split_app`
-4. Check **Direct** (to bypass Jelly processing)
-5. Set **Role** to `user` (accessible to all authenticated users)
-6. Set **HTML** to the full contents of `frontend/dist/ui-page.xml`
-7. Click **Submit**
-8. Access at: `https://dev123456.service-now.com/split_app.do`
-
 #### Step 6: Verify the full app
 
-1. Open the app (dev server or UI Page at `/split_app.do`)
+1. Open the app (dev server at `http://localhost:5173` or UI Page at `/x_{scope}_split_app.do`)
 2. Create a group
 3. Add other users (find their sys_ids in **User Administration → Users**)
 4. Add an expense with an equal split
@@ -493,19 +503,35 @@ The output is `frontend/dist/ui-page.xml`. Create a **UI Page** on your instance
 
 #### Re-deploying after code changes
 
-Modify the fluent `.now.ts` files or the server-side `.server.js` files, then re-run:
+**Backend-only changes** (fluent `.now.ts` or `.server.js` files):
 
 ```bash
 cd sn-sdk && npx now-sdk build && npx now-sdk install
 ```
 
-#### Known SDK limitations
+**Frontend-only changes** (Lit components in `frontend/src/`):
 
-- The `scopeId` in `now.config.json` must be a valid 32-char hex GUID. On first install the SDK creates the scope; if you later delete the app from Studio, this GUID becomes stale and must be regenerated (see [Step 3](#step-3-configure-scope-id))
-- Table definitions use `referenceTable: "table_name" as const` for type safety — the `as const` assertion is required
-- Each REST API route requires a unique `$id` key defined in `src/keys.now.ts`
-- Script includes reference external `.server.js` files via `Now.include()`
-- SDK stored credentials are in `~/.config/@servicenow/now-sdk/`; update them with `now-sdk auth --add` after changing your PDI password
+```bash
+cd sn-sdk && npm run build:frontend && npx now-sdk build && npx now-sdk install
+```
+
+**Both frontend and backend changes:**
+
+```bash
+cd sn-sdk && npm run deploy:all
+```
+
+> **Switching to a different PDI:** Re-run `setup-scope.js` with your new instance URL — the script will detect the new company code and rename the scope prefix. Then rebuild and install: `npm run deploy:all`.
+
+#### SDK troubleshooting
+
+| Error | Most likely cause | Check / Fix |
+|-------|-------------------|-------------|
+| `Unable to install application as application was null` | Stale `scopeId` | Generate a fresh GUID (re-run `setup-scope.js`) |
+| Same error after fresh scopeId | ServiceNow IDE plugin missing or outdated | Verify `sn_glider` v4.1.1+ is installed on the instance |
+| Same error with IDE plugin installed | Scope prefix doesn't match company code | Check `glide.appcreator.company.code` — re-run `setup-scope.js` matching this value |
+| Same error after all checks | Instance release incompatible with SDK v4.x, or `sn_appclient` not active | Verify release ≥ Washington DC and `com.glide.appclient` is active |
+| **If all above fails** | PDI does not support the fluent install processor | Use [Method 1](#deployment-method-1--deploy-using-the-servicenow-background-scripts-ui) |
 
 ## Acceptance Criteria Walkthrough
 
@@ -543,7 +569,7 @@ All custom tables are scoped to `x_split` (no global table modifications). The `
 | `sys_scope` pointing to wrong record | On metadata tables (`sys_db_object`, `sys_dictionary`, etc.), `sys_scope` must reference the **`sys_scope`** record, not the `sys_app` record. The background script now resolves `SCOPE_SYS_ID` correctly |
 | Settlement fails with "exceeds outstanding balance" | The settlement amount is larger than the net balance; check `GET /groups/{groupId}/balances` first |
 | `sys_app` API returns empty results | Some PDIs block `sys_app` table reads via REST API. The background script avoids this by using server-side `GlideRecord` |
-| SDK install: `Unable to install application as application was null` | The `scopeId` in `sn-sdk/now.config.json` is stale (e.g., after deleting the app from Studio). Generate a fresh GUID, update the config, delete `dist/app/`, and rebuild — see [Method 2, Step 3](#step-3-configure-scope-id) |
+| SDK install: `Unable to install application as application was null` | See [SDK troubleshooting table](#sdk-troubleshooting) — try fresh `scopeId`, verify ServiceNow IDE plugin, check company code prefix, then CICD API fallback, finally Method 1 |
 
 ## Data Model
 

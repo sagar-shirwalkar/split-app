@@ -5,3 +5,4 @@ dist
 # SDK build artifacts (instance-specific metadata, packaged zips)
 sn-sdk/target/
 sn-sdk/.now/
+sn-sdk/src/fluent/ui-page.now.ts

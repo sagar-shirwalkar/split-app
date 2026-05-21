@@ -66,7 +66,7 @@ async function deploy() {
   const appMeta = JSON.parse(fs.readFileSync(path.join(SN_DIR, "app.json"), "utf8"));
   let app = await find("sys_app", { name: appMeta.name });
   if (!app) {
-    app = (await rest("POST", "table/sys_app", { name: appMeta.name, scope: "x_split", description: appMeta.description || "" })).result;
+    app = (await rest("POST", "table/sys_app", { name: appMeta.name, scope: "x_2053373_split", description: appMeta.description || "" })).result;
     console.log("  Created: " + app.sys_id);
   } else {
     console.log("  Found: " + app.sys_id);
@@ -85,7 +85,7 @@ async function deploy() {
         await rest("PATCH", "table/sys_script_include/" + existing.sys_id, { script: script });
         console.log("  " + name + ": updated");
       } else {
-        await rest("POST", "table/sys_script_include", { name: name, api_name: "x_split." + name, script: script, access: "package_private" });
+        await rest("POST", "table/sys_script_include", { name: name, api_name: "x_2053373_split." + name, script: script, access: "package_private" });
         console.log("  " + name + ": created");
       }
     } catch (e) { console.error("  " + name + ": " + e.message.slice(0, 100)); }
@@ -99,19 +99,19 @@ async function deploy() {
   let wsDefId, apiBasePath;
   if (wsDefRec) {
     wsDefId = wsDefRec.sys_id;
-    // Update service_id to match api_path so the API is at /api/x_split/... (minus instance ID prefix)
+    // Update service_id to match api_path so the API is at /api/x_2053373_split/... (minus instance ID prefix)
     await rest("PATCH", "table/sys_ws_definition/" + wsDefId, {
-      service_id: "x_split",
+      service_id: "x_2053373_split",
       active: true,
     }).catch(function() {});
     // Read back the base_uri to discover the actual API path
     const updated = await rest("GET", "table/sys_ws_definition/" + wsDefId + "?sysparm_fields=base_uri,service_id");
-    apiBasePath = updated.result && updated.result.base_uri ? updated.result.base_uri : "/api/x_split";
+    apiBasePath = updated.result && updated.result.base_uri ? updated.result.base_uri : "/api/x_2053373_split";
     console.log("  Found: " + wsDefId + " (API at " + apiBasePath + ")");
   } else {
-    const created = await rest("POST", "table/sys_ws_definition", { name: wsDef.name, service_id: "x_split", active: true });
+    const created = await rest("POST", "table/sys_ws_definition", { name: wsDef.name, service_id: "x_2053373_split", active: true });
     wsDefId = created.result.sys_id;
-    apiBasePath = "/api/x_split";
+    apiBasePath = "/api/x_2053373_split";
     console.log("  Created: " + wsDefId);
   }
   await sleep(500);

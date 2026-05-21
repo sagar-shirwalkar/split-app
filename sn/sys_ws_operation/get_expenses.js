@@ -1,10 +1,10 @@
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
-  var utils = new x_split.SplitUtils();
+  var utils = new x_2053373_split.SplitUtils();
   utils.requireMembership(groupId);
 
   var expenses = [];
-  var expGr = new GlideRecord("x_split_expense");
+  var expGr = new GlideRecord("x_2053373_split_expense");
   expGr.addQuery("group", groupId);
   expGr.orderBy("date");
   expGr.query();

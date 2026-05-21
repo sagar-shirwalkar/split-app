@@ -1,11 +1,11 @@
 {
-  "name": "x_split_settlement",
+  "name": "x_2053373_split_settlement",
   "label": "Settlement",
   "fields": [
     {
       "column_name": "group",
       "type": "reference",
-      "reference": "x_split_group",
+      "reference": "x_2053373_split_group",
       "mandatory": true
     },
     {

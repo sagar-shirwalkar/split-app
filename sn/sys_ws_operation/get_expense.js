@@ -1,16 +1,16 @@
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
   var expenseId = request.pathParams.expenseId;
-  var utils = new x_split.SplitUtils();
+  var utils = new x_2053373_split.SplitUtils();
   utils.requireMembership(groupId);
 
-  var expGr = new GlideRecord("x_split_expense");
+  var expGr = new GlideRecord("x_2053373_split_expense");
   if (!expGr.get(expenseId) || expGr.group.toString() !== groupId) {
     throw new sn_ws_err.ServiceError(404, "Expense not found.");
   }
 
   var shares = [];
-  var shGr = new GlideRecord("x_split_share");
+  var shGr = new GlideRecord("x_2053373_split_share");
   shGr.addQuery("expense", expenseId);
   shGr.query();
   while (shGr.next()) {

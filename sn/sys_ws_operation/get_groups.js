@@ -1,12 +1,12 @@
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var user = gs.getUserID();
-  var gr = new GlideRecord("x_split_membership");
+  var gr = new GlideRecord("x_2053373_split_membership");
   gr.addQuery("user", user);
   gr.query();
 
   var groups = [];
   while (gr.next()) {
-    var g = new GlideRecord("x_split_group");
+    var g = new GlideRecord("x_2053373_split_group");
     if (g.get(gr.group)) {
       groups.push({
         sys_id: g.getUniqueValue(),

@@ -3,7 +3,7 @@ SplitUtils.prototype = {
   initialize: function () {},
 
   getMembership: function (groupSysId) {
-    var gr = new GlideRecord("x_split_membership");
+    var gr = new GlideRecord("x_2053373_split_membership");
     gr.addQuery("group", groupSysId);
     gr.addQuery("user", gs.getUserID());
     gr.query();

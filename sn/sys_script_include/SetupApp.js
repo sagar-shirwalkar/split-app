@@ -6,7 +6,7 @@ SetupApp.prototype = {
   },
 
   createTables: function () {
-    var names = ["x_split_group", "x_split_membership", "x_split_expense", "x_split_share", "x_split_settlement"];
+    var names = ["x_2053373_split_group", "x_2053373_split_membership", "x_2053373_split_expense", "x_2053373_split_share", "x_2053373_split_settlement"];
     var labels = ["Group", "Membership", "Expense", "Expense Share", "Settlement"];
     var results = {};
     for (var i = 0; i < names.length; i++) {
@@ -42,11 +42,11 @@ SetupApp.prototype = {
 
   createFields: function () {
     var results = {};
-    results.x_split_group = this._groupFields();
-    results.x_split_membership = this._membershipFields();
-    results.x_split_expense = this._expenseFields();
-    results.x_split_share = this._shareFields();
-    results.x_split_settlement = this._settlementFields();
+    results.x_2053373_split_group = this._groupFields();
+    results.x_2053373_split_membership = this._membershipFields();
+    results.x_2053373_split_expense = this._expenseFields();
+    results.x_2053373_split_share = this._shareFields();
+    results.x_2053373_split_settlement = this._settlementFields();
     return results;
   },
 
@@ -75,7 +75,7 @@ SetupApp.prototype = {
   },
 
   _groupFields: function () {
-    var t = "x_split_group";
+    var t = "x_2053373_split_group";
     return [
       this._field(t, "name", "string", { max_length: 255, mandatory: true }),
       this._field(t, "description", "string", { max_length: 4000 }),
@@ -85,18 +85,18 @@ SetupApp.prototype = {
   },
 
   _membershipFields: function () {
-    var t = "x_split_membership";
+    var t = "x_2053373_split_membership";
     return [
-      this._field(t, "group", "glide_object", { mandatory: true, reference: "x_split_group" }),
+      this._field(t, "group", "glide_object", { mandatory: true, reference: "x_2053373_split_group" }),
       this._field(t, "user", "glide_object", { mandatory: true, reference: "sys_user" }),
       this._field(t, "role", "string", { max_length: 20, mandatory: true, default_value: "member" }),
     ];
   },
 
   _expenseFields: function () {
-    var t = "x_split_expense";
+    var t = "x_2053373_split_expense";
     return [
-      this._field(t, "group", "glide_object", { mandatory: true, reference: "x_split_group" }),
+      this._field(t, "group", "glide_object", { mandatory: true, reference: "x_2053373_split_group" }),
       this._field(t, "description", "string", { max_length: 255, mandatory: true }),
       this._field(t, "amount", "decimal", { mandatory: true }),
       this._field(t, "date", "glide_date", { mandatory: true }),
@@ -109,9 +109,9 @@ SetupApp.prototype = {
   },
 
   _shareFields: function () {
-    var t = "x_split_share";
+    var t = "x_2053373_split_share";
     return [
-      this._field(t, "expense", "glide_object", { mandatory: true, reference: "x_split_expense" }),
+      this._field(t, "expense", "glide_object", { mandatory: true, reference: "x_2053373_split_expense" }),
       this._field(t, "user", "glide_object", { mandatory: true, reference: "sys_user" }),
       this._field(t, "amount", "decimal", { mandatory: true }),
       this._field(t, "percentage", "decimal"),
@@ -121,9 +121,9 @@ SetupApp.prototype = {
   },
 
   _settlementFields: function () {
-    var t = "x_split_settlement";
+    var t = "x_2053373_split_settlement";
     return [
-      this._field(t, "group", "glide_object", { mandatory: true, reference: "x_split_group" }),
+      this._field(t, "group", "glide_object", { mandatory: true, reference: "x_2053373_split_group" }),
       this._field(t, "from_user", "glide_object", { mandatory: true, reference: "sys_user" }),
       this._field(t, "to_user", "glide_object", { mandatory: true, reference: "sys_user" }),
       this._field(t, "amount", "decimal", { mandatory: true }),
@@ -135,10 +135,10 @@ SetupApp.prototype = {
 
   createChoices: function () {
     var defs = [
-      { table: "x_split_group", element: "base_currency", values: ["USD", "EUR", "INR", "GBP"] },
-      { table: "x_split_expense", element: "category", values: ["Food & Drink", "Travel", "Utilities", "Entertainment", "Other"] },
-      { table: "x_split_expense", element: "split_type", values: ["equal", "exact", "percentage", "shares"] },
-      { table: "x_split_membership", element: "role", values: ["admin", "member"] },
+      { table: "x_2053373_split_group", element: "base_currency", values: ["USD", "EUR", "INR", "GBP"] },
+      { table: "x_2053373_split_expense", element: "category", values: ["Food & Drink", "Travel", "Utilities", "Entertainment", "Other"] },
+      { table: "x_2053373_split_expense", element: "split_type", values: ["equal", "exact", "percentage", "shares"] },
+      { table: "x_2053373_split_membership", element: "role", values: ["admin", "member"] },
     ];
     var results = {};
     for (var d = 0; d < defs.length; d++) {

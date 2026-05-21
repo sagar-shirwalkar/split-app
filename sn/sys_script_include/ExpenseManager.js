@@ -4,7 +4,7 @@ ExpenseManager.prototype = {
 
   _calculateShares: function (expenseData) {
     if (expenseData.split_type === "equal") {
-      var memGr = new GlideRecord("x_split_membership");
+      var memGr = new GlideRecord("x_2053373_split_membership");
       memGr.addQuery("group", expenseData.group);
       memGr.query();
       var members = [];
@@ -79,7 +79,7 @@ ExpenseManager.prototype = {
     var utils = new SplitUtils();
     utils.requireMembership(expenseData.group);
 
-    var expGr = new GlideRecord("x_split_expense");
+    var expGr = new GlideRecord("x_2053373_split_expense");
     expGr.initialize();
     expGr.group = expenseData.group;
     expGr.description = expenseData.description;
@@ -96,7 +96,7 @@ ExpenseManager.prototype = {
     utils.validateShares(expenseData.amount, shares);
 
     for (var i = 0; i < shares.length; i++) {
-      var shGr = new GlideRecord("x_split_share");
+      var shGr = new GlideRecord("x_2053373_split_share");
       shGr.initialize();
       shGr.expense = expSysId;
       shGr.user = shares[i].user;
@@ -111,7 +111,7 @@ ExpenseManager.prototype = {
   },
 
   updateExpense: function (expenseSysId, expenseData) {
-    var expGr = new GlideRecord("x_split_expense");
+    var expGr = new GlideRecord("x_2053373_split_expense");
     if (!expGr.get(expenseSysId)) throw new Error("Expense not found.");
 
     var utils = new SplitUtils();
@@ -126,7 +126,7 @@ ExpenseManager.prototype = {
       );
     }
 
-    var settledCheck = new GlideRecord("x_split_share");
+    var settledCheck = new GlideRecord("x_2053373_split_share");
     settledCheck.addQuery("expense", expenseSysId);
     settledCheck.addQuery("settled_amount", ">", 0);
     settledCheck.query();
@@ -166,7 +166,7 @@ ExpenseManager.prototype = {
 
       utils.validateShares(expGr.amount, newShares);
 
-      var oldShares = new GlideRecord("x_split_share");
+      var oldShares = new GlideRecord("x_2053373_split_share");
       oldShares.addQuery("expense", expenseSysId);
       oldShares.query();
       while (oldShares.next()) {
@@ -174,7 +174,7 @@ ExpenseManager.prototype = {
       }
 
       for (var i = 0; i < newShares.length; i++) {
-        var shGr = new GlideRecord("x_split_share");
+        var shGr = new GlideRecord("x_2053373_split_share");
         shGr.initialize();
         shGr.expense = expenseSysId;
         shGr.user = newShares[i].user;
@@ -191,7 +191,7 @@ ExpenseManager.prototype = {
   },
 
   deleteExpense: function (expenseSysId) {
-    var expGr = new GlideRecord("x_split_expense");
+    var expGr = new GlideRecord("x_2053373_split_expense");
     if (!expGr.get(expenseSysId)) throw new Error("Expense not found.");
 
     var utils = new SplitUtils();
@@ -206,7 +206,7 @@ ExpenseManager.prototype = {
       );
     }
 
-    var shareGr = new GlideRecord("x_split_share");
+    var shareGr = new GlideRecord("x_2053373_split_share");
     shareGr.addQuery("expense", expenseSysId);
     shareGr.addQuery("settled_amount", ">", 0);
     shareGr.query();
@@ -214,7 +214,7 @@ ExpenseManager.prototype = {
       throw new Error("Cannot delete an expense that has settled shares.");
     }
 
-    var delShares = new GlideRecord("x_split_share");
+    var delShares = new GlideRecord("x_2053373_split_share");
     delShares.addQuery("expense", expenseSysId);
     delShares.query();
     while (delShares.next()) {

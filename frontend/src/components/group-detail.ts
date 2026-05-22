@@ -13,7 +13,7 @@ export class GroupDetail extends LitElement {
 
   render() {
     const group = this.store.state.currentGroup;
-    if (!group) return html`<p>Loading...</p>`;
+    if (!group) return html`<p class="text-[#4f4f4f]">Loading...</p>`;
 
     const currentUserId = this.store.state.currentUser;
     const isAdmin = group.members?.some(
@@ -24,22 +24,22 @@ export class GroupDetail extends LitElement {
       <div>
         <button
           @click=${() => this.store.navigate("groups")}
-          class="text-indigo-600 underline mb-2 block"
+          class="text-[#4f4f4f] underline mb-2 block text-sm"
         >
-          ← Back to groups
+          &larr; Back to groups
         </button>
-        <h2 class="text-2xl font-bold">${group.name}</h2>
-        <p class="text-gray-600 mb-4">
+        <h2 class="text-2xl font-bold text-[#000000]">${group.name}</h2>
+        <p class="text-[#4f4f4f] mb-4">
           ${group.description ?? ""} (${group.base_currency})
         </p>
 
-        <div class="bg-white shadow p-4 rounded mb-4">
-          <h3 class="font-semibold mb-2">Members</h3>
+        <div class="bg-white shadow p-4 rounded border mb-4">
+          <h3 class="font-semibold text-[#000000] mb-2">Members</h3>
           <ul class="space-y-1">
             ${group.members.map(
               (m: any) => html`
-                <li class="flex justify-between items-center">
-                  <span>${m.name} (${m.role})</span>
+                <li class="flex justify-between items-center text-[#4f4f4f]">
+                  <span>${m.name} <span class="text-xs">(${m.role})</span></span>
                   ${isAdmin && m.role !== "admin"
                     ? html`
                         <button
@@ -58,14 +58,15 @@ export class GroupDetail extends LitElement {
             ? html`
                 <div class="flex gap-2 mt-2">
                   <input
-                    class="border p-1 flex-1 text-sm"
+                    class="border p-1 flex-1 text-sm rounded text-[#4f4f4f]"
                     placeholder="User sys_id"
                     .value=${this.newMemberId}
                     @input=${(e: any) => (this.newMemberId = e.target.value)}
                   />
                   <button
                     @click=${this.addMember}
-                    class="bg-indigo-600 text-white px-3 py-1 rounded text-sm"
+                    class="px-3 py-1 rounded text-white text-sm font-semibold"
+                    style="background-color: #62d84e"
                   >
                     Add
                   </button>

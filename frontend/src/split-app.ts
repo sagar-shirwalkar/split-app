@@ -12,8 +12,8 @@ export class SplitApp extends LitElement {
   render() {
     const { currentView } = this.store.state;
     return html`
-      <div class="min-h-screen">
-        <header class="bg-indigo-600 text-white p-4">
+      <div class="min-h-screen bg-white">
+        <header class="bg-[#032d42] text-white p-4" style="background-color: #032d42">
           <h1
             class="text-2xl font-bold cursor-pointer"
             @click=${() => this.store.navigate("dashboard")}
@@ -21,7 +21,7 @@ export class SplitApp extends LitElement {
             SplitApp
           </h1>
         </header>
-        <main class="p-4">
+        <main class="p-4 max-w-3xl mx-auto">
           ${currentView === "dashboard"
             ? html`<user-dashboard></user-dashboard>`
             : ""}

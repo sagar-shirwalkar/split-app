@@ -10,23 +10,24 @@ export class GroupList extends LitElement {
   render() {
     return html`
       <div>
-        <h2 class="text-xl font-semibold mb-4">My Groups</h2>
+        <h2 class="text-xl font-bold mb-4 text-[#000000]">My Groups</h2>
         <button
           @click=${() => this.store.navigate("dashboard")}
-          class="text-indigo-600 underline mb-2 block"
+          class="text-[#4f4f4f] underline mb-2 block text-sm"
         >
-          ← Dashboard
+          &larr; Dashboard
         </button>
         <div class="flex gap-2 mb-4">
           <input
-            class="border p-2 flex-1"
+            class="border p-2 flex-1 rounded text-[#4f4f4f]"
             .value=${this.newGroupName}
             @input=${(e: any) => (this.newGroupName = e.target.value)}
             placeholder="Group name"
           />
           <button
             @click=${this.createGroup}
-            class="bg-indigo-600 text-white px-4 py-2 rounded"
+            class="px-4 py-2 rounded text-white font-semibold"
+            style="background-color: #62d84e"
           >
             Create
           </button>
@@ -34,16 +35,15 @@ export class GroupList extends LitElement {
         <div class="space-y-2">
           ${this.store.state.groups.map(
             (g) => html`
-              <div
-                class="bg-white shadow p-4 rounded flex justify-between items-center"
-              >
+              <div class="bg-white shadow p-4 rounded border flex justify-between items-center">
                 <div>
-                  <h3 class="font-bold">${g.name}</h3>
-                  <p class="text-sm text-gray-500">${g.description ?? ""}</p>
+                  <h3 class="font-bold text-[#000000]">${g.name}</h3>
+                  <p class="text-sm text-[#4f4f4f]">${g.description ?? ""}</p>
                 </div>
                 <button
                   @click=${() => this.store.navigate("group-detail", g.sys_id)}
-                  class="text-indigo-600 underline"
+                  class="px-3 py-1 rounded text-white text-sm font-semibold"
+                  style="background-color: #62d84e"
                 >
                   Open
                 </button>

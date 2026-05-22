@@ -15,7 +15,7 @@ ExpenseManager.prototype = {
       var perShare = parseFloat(
         (expenseData.amount / members.length).toFixed(2),
       );
-      var remainder = expenseData.amount - perShare * members.length;
+      var remainder = parseFloat((expenseData.amount - perShare * members.length).toFixed(2));
       return members.map(function (userSysId, index) {
         var amount = perShare;
         if (index === 0) amount += remainder;
@@ -40,9 +40,12 @@ ExpenseManager.prototype = {
       }
       var pRemainder = expenseData.amount - pSum;
       if (Math.abs(pRemainder) > 0.01 && pShares.length > 0) {
-        pShares[0].amount = parseFloat(
-          (pShares[0].amount + pRemainder).toFixed(2),
-        );
+      pShares[0].amount = parseFloat(
+        (pShares[0].amount + pRemainder).toFixed(2),
+      );
+      for (var pi2 = 0; pi2 < pShares.length; pi2++) {
+        pShares[pi2].amount = parseFloat(pShares[pi2].amount.toFixed(2));
+      }
       }
       return pShares;
     }
@@ -63,11 +66,14 @@ ExpenseManager.prototype = {
         sSum += amt;
         sShares.push({ user: ss.user, amount: amt, shares: ss.shares });
       }
-      var sRemainder = expenseData.amount - sSum;
+      var sRemainder = parseFloat((expenseData.amount - sSum).toFixed(2));
       if (Math.abs(sRemainder) > 0.01 && sShares.length > 0) {
         sShares[0].amount = parseFloat(
           (sShares[0].amount + sRemainder).toFixed(2),
         );
+      }
+      for (var sj2 = 0; sj2 < sShares.length; sj2++) {
+        sShares[sj2].amount = parseFloat(sShares[sj2].amount.toFixed(2));
       }
       return sShares;
     }
@@ -83,7 +89,7 @@ ExpenseManager.prototype = {
     expGr.initialize();
     expGr.group = expenseData.group;
     expGr.description = expenseData.description;
-    expGr.amount = expenseData.amount;
+    expGr.amount = parseFloat(expenseData.amount.toFixed(2));
     expGr.date = expenseData.date || new GlideDateTime().getDate();
     expGr.category = expenseData.category || "Other";
     expGr.payer = expenseData.payer || gs.getUserID();
@@ -136,7 +142,8 @@ ExpenseManager.prototype = {
 
     if (expenseData.description !== undefined)
       expGr.description = expenseData.description;
-    if (expenseData.amount !== undefined) expGr.amount = expenseData.amount;
+    if (expenseData.amount !== undefined)
+      expGr.amount = parseFloat(expenseData.amount.toFixed(2));
     if (expenseData.date !== undefined)
       expGr.date = expenseData.date;
     if (expenseData.category !== undefined)

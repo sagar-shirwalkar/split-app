@@ -1,27 +1,30 @@
 import { LitElement, html } from "lit";
-import { property } from "lit/decorators.js";
-import { customElement } from "lit/decorators.js";
+import { property, customElement } from "lit/decorators.js";
 
 @customElement("balance-summary")
 export class BalanceSummary extends LitElement {
   @property({ type: Array }) balances: any[] = [];
   @property({ type: Array }) members: any[] = [];
 
+  private _fmt(n: number) {
+    return `$${n.toFixed(2)}`;
+  }
+
   render() {
     return html`
-      <div class="bg-white shadow p-4 rounded">
-        <h3 class="font-semibold mb-2">Balances</h3>
+      <div class="bg-white shadow p-4 rounded border">
+        <h3 class="font-semibold text-[#000000] mb-2">Balances</h3>
         ${this.balances.length === 0
-          ? html`<p class="text-gray-500">No balances yet.</p>`
+          ? html`<p class="text-[#4f4f4f]">No balances yet.</p>`
           : ""}
         ${this.balances.map(
           (b) => html`
-            <div class="flex justify-between border-b py-1">
+            <div class="flex justify-between border-b py-1 text-[#4f4f4f]">
               <span
                 >${this.getUserName(b.from_user)} owes
                 ${this.getUserName(b.to_user)}</span
               >
-              <span class="font-mono">${b.amount.toFixed(2)}</span>
+              <span class="font-mono">${this._fmt(b.amount)}</span>
             </div>
           `,
         )}

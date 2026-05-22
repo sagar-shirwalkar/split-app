@@ -18,7 +18,7 @@ SettlementProcessor.prototype = {
       settlementData.from_user,
       settlementData.to_user,
     );
-    if (settlementData.amount > netBalance) {
+    if (parseFloat(settlementData.amount.toFixed(2)) > parseFloat(netBalance.toFixed(2)) + 0.01) {
       throw new Error(
         "Settlement amount exceeds the outstanding balance of " +
           netBalance.toFixed(2),

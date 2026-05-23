@@ -21,6 +21,10 @@ declare global {
                         table: 'sys_ws_operation'
                         id: 'e3259f72cc6749d4ab9a9ad59dd24061'
                     }
+                    'split-api-delete-group': {
+                        table: 'sys_ws_operation'
+                        id: '2f1c3323acbd44989d5a9f92b7b690fd'
+                    }
                     'split-api-delete-member': {
                         table: 'sys_ws_operation'
                         id: 'd8bd18602e4e4995954044d19a5b82fb'
@@ -266,6 +270,13 @@ declare global {
                         }
                     },
                     {
+                        table: 'sn_glider_source_artifact'
+                        id: '31f0b144feda4ca590997e493d081ff9'
+                        key: {
+                            name: 'x_snc_split_split_app.do - BYOUI Files'
+                        }
+                    },
+                    {
                         table: 'sys_choice'
                         id: '378e0f7f38a94acca3407a6ec6af053c'
                         key: {
@@ -290,6 +301,13 @@ declare global {
                             name: 'x_snc_split_share'
                             element: 'settled'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_ux_lib_asset'
+                        id: '3f8de3870afc463fa6d6f85b35594f67'
+                        key: {
+                            name: 'x_snc_split/split_app_main'
                         }
                     },
                     {
@@ -353,6 +371,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sn_glider_source_artifact_m2m'
+                        id: '56beeff387bc444c8b785bac5abe46c5'
+                        key: {
+                            application_file: 'f56677c2fb084bc4b98c163bee28b9e1'
+                            source_artifact: '31f0b144feda4ca590997e493d081ff9'
+                        }
+                    },
+                    {
                         table: 'sys_choice_set'
                         id: '575df68c8ded4141ba36729e21350ee2'
                         key: {
@@ -409,6 +435,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sn_glider_source_artifact_m2m'
+                        id: '63dbc0cdc58743e496127efe69a2aad6'
+                        key: {
+                            application_file: 'a882d82a91d146a49c91753ff90562de'
+                            source_artifact: '31f0b144feda4ca590997e493d081ff9'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: '67d494b0990248ed9e96c63a71ce049c'
                         key: {
@@ -442,6 +476,14 @@ declare global {
                             name: 'x_snc_split_share'
                             element: 'percentage'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sn_glider_source_artifact_m2m'
+                        id: '6f7786713c654f219faa6c2a4532e3da'
+                        key: {
+                            application_file: '3f8de3870afc463fa6d6f85b35594f67'
+                            source_artifact: '31f0b144feda4ca590997e493d081ff9'
                         }
                     },
                     {
@@ -898,6 +940,13 @@ declare global {
                         key: {
                             name: 'x_snc_split_share'
                             element: 'amount'
+                        }
+                    },
+                    {
+                        table: 'sys_ux_lib_asset'
+                        id: 'f56677c2fb084bc4b98c163bee28b9e1'
+                        key: {
+                            name: 'x_snc_split/split_app_main.js.map'
                         }
                     },
                     {

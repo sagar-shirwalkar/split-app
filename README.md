@@ -5,9 +5,10 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 ## Features
 
 ### Group Management
-- Create groups with a name, optional description, and configurable base currency (default: USD)
+- Create groups with a name, optional description, and configurable base currency (USD/EUR/INR/GBP)
+- Duplicate group names are rejected (case-sensitive check server-side)
 - Group creator is automatically assigned the Admin role
-- Admins can add or remove members (removal blocked if the member has outstanding balances)
+- Admins can remove members (blocked if member has outstanding balances) and **delete the group entirely** (cascades to all associated transactions)
 - Users see only the groups they belong to
 
 ### Expense Management
@@ -17,8 +18,8 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
   - **Percentage** — user specifies each member's percentage; amounts auto-calculated
   - **Shares** — user assigns integer units; amounts auto-calculated
 - Categories: Food & Drink, Travel, Utilities, Entertainment, Other
-- Optional notes (up to 500 characters)
-- Optional receipt image URL
+- Optional notes (up to 100 characters)
+- Optional receipt image upload
 - The payer or a group Admin can edit or delete an expense, provided no shares have been settled
 
 ### Balance & Settlement
@@ -32,7 +33,8 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 ### Security
 - Membership-gated: all REST endpoints validate the caller belongs to the group
 - Only the expense payer or a group Admin can mutate an expense
-- Only Admins can add or remove members
+- Only Admins can add, remove, or delete members and groups
+- Duplicate group names are rejected (409 Conflict)
 
 ## Tech Stack
 
@@ -41,8 +43,8 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 | **Frontend** | [Lit](https://lit.dev) 3.x — reactive web components |
 | **Styling** | [Tailwind CSS](https://tailwindcss.com) v4 — utility-first CSS |
 | **Bundler** | [Vite](https://vitejs.dev) 8.x — dev server & production builds |
-| **Backend** | ServiceNow scoped application (scope `x_split`) |
-| **Data** | Custom ServiceNow tables — `x_split_group`, `x_split_membership`, `x_split_expense`, `x_split_share`, `x_split_settlement` |
+| **Backend** | ServiceNow scoped application (scope `x_{company_code}_split`) |
+| **Data** | Custom ServiceNow tables — `x_{scope}_group`, `x_{scope}_membership`, `x_{scope}_expense`, `x_{scope}_share`, `x_{scope}_settlement` |
 | **API** | ServiceNow REST API with Script Includes for business logic |
 | **Deployment (Background Script)** | `setup-bg-script.js` (GlideRecord) + `deploy.js` (Node.js) |
 | **Deployment (SDK)** | `@servicenow/sdk` v4.7.0 — fluent TypeScript (`sn-sdk/`) → `now-sdk build && now-sdk install` |
@@ -53,53 +55,70 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 split-app/
 ├── frontend/                    # Lit + Vite SPA
 │   ├── src/
-│   │   ├── main.ts              # Entry point
+│   │   ├── main.ts              # Entry point (LitElement Light DOM override)
 │   │   ├── split-app.ts         # Root component (view router)
 │   │   ├── store/store.ts       # Reactive state (StoreController)
-│   │   ├── services/api.ts      # Fetch-based API client
+│   │   ├── services/api.ts      # Fetch-based API client (X-UserToken, result unwrap)
+│   │   ├── index.css            # Tailwind v4 theme with SN color palette
 │   │   └── components/
 │   │       ├── user-dashboard.ts
-│   │       ├── group-list.ts
-│   │       ├── group-detail.ts   # Includes member management
+│   │       ├── group-list.ts         # Create group with currency + description + toast
+│   │       ├── group-detail.ts       # Member management + delete group + toast
 │   │       ├── balance-summary.ts
-│   │       ├── add-expense-form.ts
+│   │       ├── add-expense-form.ts   # Date picker, receipt upload, notes
 │   │       ├── expense-list.ts
-│   │       └── record-settlement-form.ts
+│   │       ├── record-settlement-form.ts
+│   │       └── date-picker.ts        # Custom date picker (month/year dropdowns, 2000+)
 │   ├── index.html
 │   ├── vite.config.ts
 │   └── package.json
 ├── scripts/
-│   └── setup-scope.js           # Detect company code, rename scope prefix across all files
-├── setup-bg-script.js            # One-time bootstrap (run in ServiceNow Background Scripts)
-├── deploy.js                     # Deploy/update script includes and API
-├── sn/                           # ServiceNow backend artifacts (JSON)
+│   ├── setup-scope.js           # Detect company code, rename scope prefix across all files
+│   └── deploy.js                # Deploy/update script includes and API (Method 1)
+├── sn/                           # ServiceNow backend artifacts (JSON/JS for Method 1)
 │   ├── app.json
 │   ├── sys_db_object/           # Custom table definitions
 │   ├── sys_script_include/      # Business logic
-│   ├── sys_ws_definition/       # REST API definition
+│   ├── sys_ws_definition/       # REST API definition + operation list
 │   └── sys_ws_operation/        # Per-endpoint scripts
-├── sn-sdk/                       # @servicenow/sdk 4.7.0 fluent project (alternative deployment)
+│       ├── get_groups.js
+│       ├── post_groups.js
+│       ├── get_group.js
+│       ├── delete_group.js          # Admin group deletion with cascade
+│       ├── post_members.js          # Accepts user_name or user_sys_id
+│       ├── delete_member.js
+│       ├── get_expenses.js
+│       ├── post_expenses.js
+│       ├── get_expense.js
+│       ├── put_expense.js
+│       ├── delete_expense.js
+│       ├── get_balances.js
+│       ├── post_settlements.js
+│       └── get_user_dashboard.js
+├── sn-sdk/                       # @servicenow/sdk 4.7.0 fluent project (Method 2)
 │   ├── now.config.json
 │   ├── package.json
+│   ├── tsconfig.json
 │   ├── scripts/
-│   │   └── build-frontend.cjs   # Builds Vite frontend, generates client/ JS + HTML
+│   │   └── build-frontend.cjs   # Builds Vite frontend → client/ JS + HTML, strips @property CSS
 │   ├── src/
 │   │   ├── client/              # Generated frontend files (gitignored)
 │   │   │   ├── split_app_main.jsx   # Lit bundle (sys_ui_script source)
-│   │   │   └── index.html           # HTML shell (sys_ui_page source)
+│   │   │   └── index.html           # HTML shell with inline CSS (sys_ui_page source)
 │   │   ├── keys.now.ts          # Type-safe logical IDs
 │   │   ├── fluent/
 │   │   │   ├── index.now.ts     # Entry point (imports all definitions)
+│   │   │   ├── declarations.d.ts   # *.html module declaration
 │   │   │   ├── ui-pages/
-│   │   │   │   └── split_app.now.ts   # UiPage fluent definition (imports client/index.html)
-│   │   │   ├── tables/          # Fluent table definitions
-│   │   │   ├── script-includes/ # Fluent ScriptInclude wrappers
-│   │   │   ├── rest-apis/       # Fluent REST API definition
+│   │   │   │   └── split_app.now.ts   # UiPage fluent def (imports client/index.html)
+│   │   │   ├── tables/          # Fluent table definitions (group, membership, expense, share, settlement)
+│   │   │   ├── script-includes/ # Fluent ScriptInclude wrappers (SplitUtils, BalanceCalculator, ExpenseManager, SettlementProcessor)
+│   │   │   ├── rest-apis/       # Fluent REST API route definitions
 │   │   │   └── generated/       # Auto-generated sys_id mappings
 │   │   └── server/
-│   │       └── script-includes/ # Server-side JS (referenced by fluent definitions)
-│   └── tsconfig.json
-└── package.json                 # Monorepo scripts
+│   │       └── script-includes/ # Server-side JS (referenced by fluent definitions via Now.include())
+│   └── dist/                    # SDK build output
+└── package.json
 ```
 
 ### REST API Endpoints
@@ -109,9 +128,10 @@ All under the discovered `base_uri` (e.g., `/api/x_2053373_split/x_2053373_split
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/groups` | List groups for the current user |
-| `POST` | `/groups` | Create a new group |
+| `POST` | `/groups` | Create a new group (rejects duplicate names with 409) |
 | `GET` | `/groups/{groupId}` | Get group detail with members |
-| `POST` | `/groups/{groupId}/members` | Add a member (admin only) |
+| `DELETE` | `/groups/{groupId}` | Delete group with cascade (admin only) |
+| `POST` | `/groups/{groupId}/members` | Add a member (admin only; accepts `user_name` or `user_sys_id`) |
 | `DELETE` | `/groups/{groupId}/members/{userId}` | Remove a member (admin only) |
 | `GET` | `/groups/{groupId}/expenses` | List all expenses for a group |
 | `POST` | `/groups/{groupId}/expenses` | Create an expense |
@@ -623,8 +643,8 @@ x_split_expense
 ├── category (choice: Food & Drink/Travel/Utilities/Entertainment/Other)
 ├── payer (reference to sys_user)
 ├── split_type (choice: equal/exact/percentage/shares)
-├── notes (string, max 500)
-└── receipt_image (string, max 500)
+├── notes (string, max 100)
+└── receipt_image (string)
 
 x_split_share
 ├── expense (reference to x_split_expense)
@@ -642,5 +662,5 @@ x_split_settlement
 ├── amount (decimal)
 ├── date (date)
 ├── payment_method (string, max 100)
-└── notes (string, max 500)
+└── notes (string, max 100)
 ```

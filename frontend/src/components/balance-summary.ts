@@ -6,8 +6,8 @@ export class BalanceSummary extends LitElement {
   @property({ type: Array }) balances: any[] = [];
   @property({ type: Array }) members: any[] = [];
 
-  private _fmt(n: number) {
-    return `$${n.toFixed(2)}`;
+  private _fmt(n: number | null | undefined) {
+    return `$${(n ?? 0).toFixed(2)}`;
   }
 
   render() {

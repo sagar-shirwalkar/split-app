@@ -18,7 +18,7 @@ export async function discoverApiBase(): Promise<string> {
 async function request(method: string, path: string, data?: any): Promise<any> {
   const opts: RequestInit = {
     method,
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "X-UserToken": (window as any).g_ck || "" },
     credentials: "include",
   };
   if (data !== undefined) {

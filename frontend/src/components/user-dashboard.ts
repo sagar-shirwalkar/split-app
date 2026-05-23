@@ -6,8 +6,8 @@ import { StoreController } from "../store/store.js";
 export class UserDashboard extends LitElement {
   private store = new StoreController(this);
 
-  private _fmt(n: number) {
-    return `$${n.toFixed(2)}`;
+  private _fmt(n: number | null | undefined) {
+    return `$${(n ?? 0).toFixed(2)}`;
   }
 
   render() {
@@ -19,13 +19,13 @@ export class UserDashboard extends LitElement {
           <div class="bg-white shadow p-4 rounded border">
             <h3 class="font-semibold text-[#4f4f4f]">You Owe</h3>
             <p class="text-2xl text-red-600">
-              ${dash ? this._fmt(dash.total_owed) : "..."}
+              ${dash ? this._fmt(dash.total_owed) : "$0.00"}
             </p>
           </div>
           <div class="bg-white shadow p-4 rounded border">
             <h3 class="font-semibold text-[#4f4f4f]">You Are Owed</h3>
             <p class="text-2xl text-green-600">
-              ${dash ? this._fmt(dash.total_owing) : "..."}
+              ${dash ? this._fmt(dash.total_owing) : "$0.00"}
             </p>
           </div>
         </div>

@@ -29,7 +29,27 @@ function main() {
 
   // Extract CSS from <style> tag
   const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/);
-  const css = styleMatch ? styleMatch[1] : "";
+  let css = styleMatch ? styleMatch[1] : "";
+
+  // Strip @layer properties{...} block (Jelly treats <percentage>, <length> as XML tags)
+  css = (function stripLayerProperties(input) {
+    const idx = input.indexOf("@layer properties{");
+    if (idx === -1) return input;
+    let depth = 1;
+    let i = idx + "@layer properties{".length;
+    while (i < input.length && depth > 0) {
+      if (input[i] === "{") depth++;
+      if (input[i] === "}") depth--;
+      i++;
+    }
+    return input.slice(0, idx) + input.slice(i);
+  })(css);
+
+  // Strip all @property rules (Jelly treats <percentage> as XML tag)
+  css = css.replace(/@property\s+--[\w-]+\s*\{[^}]*\}/g, "");
+
+  // Strip any remaining empty @layer properties declaration
+  css = css.replace(/@layer\s+properties;\s*/g, "");
 
   // Generate HTML shell for UiPage
   const shellHtml = `<!DOCTYPE html>

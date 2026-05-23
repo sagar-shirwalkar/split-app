@@ -3,9 +3,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "version": 1,
-  "serialNumber": "urn:uuid:bf8d4ade-b793-4349-8e3b-30794f1b557b",
+  "serialNumber": "urn:uuid:ab4c7668-1ffe-4401-8fae-8b3f2f1db782",
   "metadata": {
-    "timestamp": "2026-05-21T21:00:19.343Z",
+    "timestamp": "2026-05-23T07:41:05.627Z",
     "tools": {
       "components": [
         {
@@ -21,14 +21,14 @@
       "type": "application",
       "name": "split-app-sdk",
       "version": "1.0.0",
-      "bom-ref": "pkg:servicenow/split-app-sdk@1.0.0?sys_scope_id=18e284145d03460d9a4c73fed367f5ab",
-      "purl": "pkg:servicenow/split-app-sdk@1.0.0?sys_scope_id=18e284145d03460d9a4c73fed367f5ab"
+      "bom-ref": "pkg:servicenow/split-app-sdk@1.0.0?sys_scope_id=6789306cf3ff41b5969db7ab6ce63322",
+      "purl": "pkg:servicenow/split-app-sdk@1.0.0?sys_scope_id=6789306cf3ff41b5969db7ab6ce63322"
     }
   },
   "components": [],
   "dependencies": [
     {
-      "ref": "pkg:servicenow/split-app-sdk@1.0.0?sys_scope_id=18e284145d03460d9a4c73fed367f5ab"
+      "ref": "pkg:servicenow/split-app-sdk@1.0.0?sys_scope_id=6789306cf3ff41b5969db7ab6ce63322"
     }
   ]
 }

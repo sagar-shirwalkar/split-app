@@ -1,13 +1,13 @@
 import { Table, ReferenceColumn, ChoiceColumn } from "@servicenow/sdk/core";
 
-export const x_2053373_split_membership = Table({
+export const x_snc_split_membership = Table({
   $id: Now.ID["split-table-membership"],
-  name: "x_2053373_split_membership",
+  name: "x_snc_split_membership",
   label: "Membership",
   schema: {
     group: ReferenceColumn({
       label: "Group",
-      referenceTable: "x_2053373_split_group" as const,
+      referenceTable: "x_snc_split_group" as const,
       mandatory: true,
     }),
     user: ReferenceColumn({

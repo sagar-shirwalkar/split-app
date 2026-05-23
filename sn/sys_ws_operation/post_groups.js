@@ -8,7 +8,7 @@
     throw new sn_ws_err.ServiceError(400, "Group name is required.");
   }
 
-  var gr = new GlideRecord("x_2053373_split_group");
+  var gr = new GlideRecord("x_snc_split_group");
   gr.initialize();
   gr.name = name;
   gr.description = description;
@@ -16,7 +16,7 @@
   gr.created_by = gs.getUserID();
   var groupId = gr.insert();
 
-  var mem = new GlideRecord("x_2053373_split_membership");
+  var mem = new GlideRecord("x_snc_split_membership");
   mem.initialize();
   mem.group = groupId;
   mem.user = gs.getUserID();

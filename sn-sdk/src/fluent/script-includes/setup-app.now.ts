@@ -6,6 +6,6 @@ ScriptInclude({
   active: true,
   clientCallable: false,
   accessibleFrom: "package_private",
-  apiName: "x_2053373_split.SetupApp",
+  apiName: "x_snc_split.SetupApp",
   script: Now.include("../../server/script-includes/SetupApp.server.js"),
 });

@@ -434,11 +434,18 @@ Install SDK dependencies:
 cd sn-sdk && npm install
 ```
 
-#### Step 3: Authenticate (environment variables)
+#### Step 3: Authenticate
 
-The `now-sdk auth --add` interactive prompt may not work well in all shells. Use environment variables instead:
+The SDK needs stored credentials to install. Use `auth --add` to save them to your OS keychain (done once per instance):
 
 ```bash
+cd sn-sdk && npx @servicenow/sdk auth --add https://dev123456.service-now.com --type basic
+```
+
+For CI/CD or scripted environments, use the environment variable method. All four variables must be set in the same shell session:
+
+```bash
+export SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL
 export SN_SDK_INSTANCE_URL=https://dev123456.service-now.com
 export SN_SDK_USER=admin
 export SN_SDK_USER_PWD='your-password'

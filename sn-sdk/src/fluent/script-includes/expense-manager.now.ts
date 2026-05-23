@@ -6,6 +6,6 @@ ScriptInclude({
   active: true,
   clientCallable: false,
   accessibleFrom: "public",
-  apiName: "x_2053373_split.ExpenseManager",
+  apiName: "x_snc_split.ExpenseManager",
   script: Now.include("../../server/script-includes/ExpenseManager.server.js"),
 });

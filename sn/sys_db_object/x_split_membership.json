@@ -1,11 +1,11 @@
 {
-  "name": "x_2053373_split_membership",
+  "name": "x_snc_split_membership",
   "label": "Membership",
   "fields": [
     {
       "column_name": "group",
       "type": "reference",
-      "reference": "x_2053373_split_group",
+      "reference": "x_snc_split_group",
       "mandatory": true
     },
     {

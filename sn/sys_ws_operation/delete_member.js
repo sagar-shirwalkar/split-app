@@ -2,14 +2,14 @@
   // DELETE /groups/{groupId}/members/{userSysId}
   var groupId = request.pathParams.groupId;
   var userId = request.pathParams.userSysId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   if (!utils.isAdmin(groupId))
     throw new sn_ws_err.ServiceError(
       403,
       "Only group admins can remove members.",
     );
 
-  var calc = new x_2053373_split.BalanceCalculator();
+  var calc = new x_snc_split.BalanceCalculator();
   var balances = calc.getGroupBalances(groupId);
   for (var i = 0; i < balances.length; i++) {
     var b = balances[i];
@@ -21,7 +21,7 @@
     }
   }
 
-  var mem = new GlideRecord("x_2053373_split_membership");
+  var mem = new GlideRecord("x_snc_split_membership");
   mem.addQuery("group", groupId);
   mem.addQuery("user", userId);
   mem.query();

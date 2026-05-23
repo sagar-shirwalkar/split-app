@@ -1,11 +1,11 @@
 {
-  "name": "x_2053373_split_share",
+  "name": "x_snc_split_share",
   "label": "Expense Share",
   "fields": [
     {
       "column_name": "expense",
       "type": "reference",
-      "reference": "x_2053373_split_expense",
+      "reference": "x_snc_split_expense",
       "mandatory": true
     },
     {

@@ -3,7 +3,7 @@ import { RestApi } from "@servicenow/sdk/core";
 RestApi({
   $id: Now.ID["split-api"],
   name: "split_api",
-  serviceId: "x_2053373_split",
+  serviceId: "x_snc_split",
   consumes: "application/json",
   produces: "application/json",
   active: true,
@@ -18,12 +18,12 @@ RestApi({
       script: `
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var user = gs.getUserID();
-  var gr = new GlideRecord("x_2053373_split_membership");
+  var gr = new GlideRecord("x_snc_split_membership");
   gr.addQuery("user", user);
   gr.query();
   var groups = [];
   while (gr.next()) {
-    var g = new GlideRecord("x_2053373_split_group");
+    var g = new GlideRecord("x_snc_split_group");
     if (g.get(gr.group)) {
       groups.push({
         sys_id: g.getUniqueValue(),
@@ -49,14 +49,14 @@ RestApi({
   var description = body.description || "";
   var currency = body.base_currency || "USD";
   if (!name) throw new sn_ws_err.ServiceError(400, "Group name is required.");
-  var gr = new GlideRecord("x_2053373_split_group");
+  var gr = new GlideRecord("x_snc_split_group");
   gr.initialize();
   gr.name = name;
   gr.description = description;
   gr.base_currency = currency;
   gr.created_by = gs.getUserID();
   var groupId = gr.insert();
-  var mem = new GlideRecord("x_2053373_split_membership");
+  var mem = new GlideRecord("x_snc_split_membership");
   mem.initialize();
   mem.group = groupId;
   mem.user = gs.getUserID();
@@ -74,12 +74,12 @@ RestApi({
       script: `
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   utils.requireMembership(groupId);
-  var gr = new GlideRecord("x_2053373_split_group");
+  var gr = new GlideRecord("x_snc_split_group");
   if (!gr.get(groupId)) throw new sn_ws_err.ServiceError(404, "Group not found.");
   var members = [];
-  var memGr = new GlideRecord("x_2053373_split_membership");
+  var memGr = new GlideRecord("x_snc_split_membership");
   memGr.addQuery("group", groupId);
   memGr.query();
   while (memGr.next()) {
@@ -96,18 +96,18 @@ RestApi({
       script: `
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can add members.");
   var body = request.body.data;
   var userId = body.user_sys_id;
   var role = body.role || "member";
   if (!userId) throw new sn_ws_err.ServiceError(400, "User sys_id required.");
-  var existing = new GlideRecord("x_2053373_split_membership");
+  var existing = new GlideRecord("x_snc_split_membership");
   existing.addQuery("group", groupId);
   existing.addQuery("user", userId);
   existing.query();
   if (existing.next()) throw new sn_ws_err.ServiceError(400, "User is already a member.");
-  var mem = new GlideRecord("x_2053373_split_membership");
+  var mem = new GlideRecord("x_snc_split_membership");
   mem.initialize();
   mem.group = groupId;
   mem.user = userId;
@@ -125,15 +125,15 @@ RestApi({
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
   var userId = request.pathParams.userSysId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can remove members.");
-  var calc = new x_2053373_split.BalanceCalculator();
+  var calc = new x_snc_split.BalanceCalculator();
   var balances = calc.getGroupBalances(groupId);
   for (var i = 0; i < balances.length; i++) {
     var b = balances[i];
     if (b.from_user === userId || b.to_user === userId) throw new sn_ws_err.ServiceError(400, "Cannot remove a member with outstanding balances.");
   }
-  var mem = new GlideRecord("x_2053373_split_membership");
+  var mem = new GlideRecord("x_snc_split_membership");
   mem.addQuery("group", groupId);
   mem.addQuery("user", userId);
   mem.query();
@@ -151,7 +151,7 @@ RestApi({
   var groupId = request.pathParams.groupId;
   var body = request.body.data;
   body.group = groupId;
-  var mgr = new x_2053373_split.ExpenseManager();
+  var mgr = new x_snc_split.ExpenseManager();
   var expId = mgr.createExpense(body);
   response.setStatus(201);
   return { sys_id: expId };
@@ -165,10 +165,10 @@ RestApi({
       script: `
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   utils.requireMembership(groupId);
   var expenses = [];
-  var expGr = new GlideRecord("x_2053373_split_expense");
+  var expGr = new GlideRecord("x_snc_split_expense");
   expGr.addQuery("group", groupId);
   expGr.orderBy("date");
   expGr.query();
@@ -197,12 +197,12 @@ RestApi({
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
   var expenseId = request.pathParams.expenseId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   utils.requireMembership(groupId);
-  var expGr = new GlideRecord("x_2053373_split_expense");
+  var expGr = new GlideRecord("x_snc_split_expense");
   if (!expGr.get(expenseId) || expGr.group.toString() !== groupId) throw new sn_ws_err.ServiceError(404, "Expense not found.");
   var shares = [];
-  var shGr = new GlideRecord("x_2053373_split_share");
+  var shGr = new GlideRecord("x_snc_split_share");
   shGr.addQuery("expense", expenseId);
   shGr.query();
   while (shGr.next()) {
@@ -238,7 +238,7 @@ RestApi({
   var groupId = request.pathParams.groupId;
   var expenseId = request.pathParams.expenseId;
   var body = request.body.data;
-  var mgr = new x_2053373_split.ExpenseManager();
+  var mgr = new x_snc_split.ExpenseManager();
   mgr.updateExpense(expenseId, body);
   return { sys_id: expenseId };
 })(request, response);`,
@@ -252,9 +252,9 @@ RestApi({
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
   var expenseId = request.pathParams.expenseId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   utils.requireMembership(groupId);
-  var mgr = new x_2053373_split.ExpenseManager();
+  var mgr = new x_snc_split.ExpenseManager();
   mgr.deleteExpense(expenseId);
   return { status: "deleted" };
 })(request, response);`,
@@ -267,9 +267,9 @@ RestApi({
       script: `
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
   var groupId = request.pathParams.groupId;
-  var utils = new x_2053373_split.SplitUtils();
+  var utils = new x_snc_split.SplitUtils();
   utils.requireMembership(groupId);
-  var calc = new x_2053373_split.BalanceCalculator();
+  var calc = new x_snc_split.BalanceCalculator();
   return calc.getGroupBalances(groupId);
 })(request, response);`,
     },
@@ -283,7 +283,7 @@ RestApi({
   var groupId = request.pathParams.groupId;
   var body = request.body.data;
   body.group = groupId;
-  var processor = new x_2053373_split.SettlementProcessor();
+  var processor = new x_snc_split.SettlementProcessor();
   processor.recordSettlement(body);
   return { status: "recorded" };
 })(request, response);`,
@@ -295,7 +295,7 @@ RestApi({
       path: "user/dashboard",
       script: `
 (function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
-  var calc = new x_2053373_split.BalanceCalculator();
+  var calc = new x_snc_split.BalanceCalculator();
   var dash = calc.getUserDashboard(gs.getUserID());
   dash.current_user = gs.getUserID();
   return dash;

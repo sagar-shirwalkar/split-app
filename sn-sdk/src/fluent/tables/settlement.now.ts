@@ -1,13 +1,13 @@
 import { Table, ReferenceColumn, DecimalColumn, DateColumn, StringColumn } from "@servicenow/sdk/core";
 
-export const x_2053373_split_settlement = Table({
+export const x_snc_split_settlement = Table({
   $id: Now.ID["split-table-settlement"],
-  name: "x_2053373_split_settlement",
+  name: "x_snc_split_settlement",
   label: "Settlement",
   schema: {
     group: ReferenceColumn({
       label: "Group",
-      referenceTable: "x_2053373_split_group" as const,
+      referenceTable: "x_snc_split_group" as const,
       mandatory: true,
     }),
     from_user: ReferenceColumn({

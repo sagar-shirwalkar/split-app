@@ -1,8 +1,8 @@
 import { Table, StringColumn, ChoiceColumn, ReferenceColumn } from "@servicenow/sdk/core";
 
-export const x_2053373_split_group = Table({
+export const x_snc_split_group = Table({
   $id: Now.ID["split-table-group"],
-  name: "x_2053373_split_group",
+  name: "x_snc_split_group",
   label: "Group",
   schema: {
     name: StringColumn({ label: "Name", maxLength: 255, mandatory: true }),

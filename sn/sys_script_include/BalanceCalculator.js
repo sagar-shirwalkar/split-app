@@ -7,7 +7,7 @@ BalanceCalculator.prototype = {
     utils.requireMembership(groupSysId);
 
     var rawDebts = {};
-    var shareGr = new GlideRecord("x_2053373_split_share");
+    var shareGr = new GlideRecord("x_snc_split_share");
     shareGr.addQuery("expense.group", groupSysId);
     shareGr.query();
     while (shareGr.next()) {
@@ -20,7 +20,7 @@ BalanceCalculator.prototype = {
       }
     }
 
-    var settGr = new GlideRecord("x_2053373_split_settlement");
+    var settGr = new GlideRecord("x_snc_split_settlement");
     settGr.addQuery("group", groupSysId);
     settGr.query();
     while (settGr.next()) {
@@ -95,7 +95,7 @@ BalanceCalculator.prototype = {
   getUserDashboard: function (userSysId) {
     var owedTotal = 0,
       owingTotal = 0;
-    var memGr = new GlideRecord("x_2053373_split_membership");
+    var memGr = new GlideRecord("x_snc_split_membership");
     memGr.addQuery("user", userSysId);
     memGr.query();
     while (memGr.next()) {

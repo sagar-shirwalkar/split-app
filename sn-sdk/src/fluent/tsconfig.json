@@ -9,5 +9,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["**/*.now.ts", "../keys.now.ts"]
+  "include": ["**/*.now.ts", "**/*.d.ts", "../keys.now.ts"]
 }

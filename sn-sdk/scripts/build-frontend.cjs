@@ -5,66 +5,52 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..", "..");
 const FRONTEND_DIR = path.join(ROOT, "frontend");
 const SDK_DIR = path.resolve(__dirname, "..");
-const OUT_FILE = path.join(SDK_DIR, "src", "fluent", "ui-page.now.ts");
-
-function getCurrentScope() {
-  const configPath = path.join(SDK_DIR, "now.config.json");
-  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  return config.scope || "x_split";
-}
-
-function getHtml() {
-  const distXml = path.join(FRONTEND_DIR, "dist", "ui-page.xml");
-  const fallback = path.join(FRONTEND_DIR, "dist", "index.html");
-
-  if (fs.existsSync(distXml)) {
-    const xml = fs.readFileSync(distXml, "utf8");
-    const m = xml.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
-    if (m) return m[1].trim();
-  }
-  if (fs.existsSync(fallback)) {
-    return fs.readFileSync(fallback, "utf8");
-  }
-  return null;
-}
-
-function stripModuleAttrs(html) {
-  return html
-    .replace(/<script\s+type="module"\s+crossorigin>/g, "<script>")
-    .replace(/<script\s+crossorigin\s+type="module"\s*>/g, "<script>");
-}
+const CLIENT_DIR = path.join(SDK_DIR, "src", "client");
 
 function main() {
   console.log("Building frontend...");
-  execSync("npm run build:ui-page", { cwd: FRONTEND_DIR, stdio: "inherit" });
+  execSync("npm run build", { cwd: FRONTEND_DIR, stdio: "inherit" });
 
-  const html = getHtml();
-  if (!html) {
-    console.error("No built frontend found.");
+  const htmlPath = path.join(FRONTEND_DIR, "dist", "index.html");
+  const html = fs.readFileSync(htmlPath, "utf8");
+
+  // Extract JS from <script> tag
+  const scriptMatch = html.match(/<script[^>]*>([\s\S]*?)<\/script>/);
+  if (!scriptMatch) {
+    console.error("No script tag found in built HTML.");
     process.exit(1);
   }
+  let js = scriptMatch[1];
 
-  const cleaned = stripModuleAttrs(html);
-  const scope = getCurrentScope();
-  const escaped = cleaned
-    .replace(/\\/g, "\\\\")
-    .replace(/`/g, "\\`")
-    .replace(/\${/g, "\\${");
+  // Write JS file for sys_ui_script
+  const jsPath = path.join(CLIENT_DIR, "split_app_main.jsx");
+  fs.mkdirSync(path.dirname(jsPath), { recursive: true });
+  fs.writeFileSync(jsPath, js);
 
-  const content = `import { UiPage } from "@servicenow/sdk/core";
+  // Extract CSS from <style> tag
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+  const css = styleMatch ? styleMatch[1] : "";
 
-UiPage({
-  $id: Now.ID["split-ui-page"],
-  endpoint: \`${scope}_split_app.do\`,
-  direct: true,
-  html: \`${escaped}\`,
-  category: "general",
-  description: "Split App — track shared expenses and settle up with friends",
-});
-`;
+  // Generate HTML shell for UiPage
+  const shellHtml = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SplitApp</title>
+    <style>${css}</style>
+    <script src="split_app_main.jsx?uxpcb=$[UxFrameworkScriptables.getFlushTimestamp()]" type="module"></script>
+  </head>
+  <body>
+    <split-app></split-app>
+  </body>
+</html>`;
 
-  fs.writeFileSync(OUT_FILE, content);
-  console.log(`Generated: ${OUT_FILE}`);
+  const htmlOut = path.join(CLIENT_DIR, "index.html");
+  fs.writeFileSync(htmlOut, shellHtml);
+
+  console.log(`Generated: ${jsPath}`);
+  console.log(`Generated: ${htmlOut}`);
 }
 
 main();

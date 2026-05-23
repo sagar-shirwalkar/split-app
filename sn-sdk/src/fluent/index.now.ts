@@ -11,5 +11,5 @@ import "./script-includes/expense-manager.now";
 import "./script-includes/settlement-processor.now";
 import "./script-includes/setup-app.now";
 import "./rest-apis/split-api.now";
-import "./ui-page.now";
+import "./ui-pages/split_app.now";
 import "./ui-page.test.now";

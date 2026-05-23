@@ -83,7 +83,8 @@ export class StoreController implements ReactiveController {
 
   async loadDashboard() {
     try {
-      const dash: UserDashboard = await apiGet("/user/dashboard");
+      const r = await apiGet("/user/dashboard");
+      const dash = r.result || r;
       this.state.userDashboard = dash;
       if (dash.current_user) {
         this.state.currentUser = dash.current_user;
@@ -94,17 +95,22 @@ export class StoreController implements ReactiveController {
 
   async loadGroups() {
     try {
-      this.state.groups = await apiGet("/groups");
-    } catch (e) {}
+      const r = await apiGet("/groups");
+      this.state.groups = Array.isArray(r) ? r : r.result || [];
+    } catch (e) {
+      this.state.groups = [];
+    }
     this.host.requestUpdate();
   }
 
   async loadGroupDetail(groupId: string) {
     try {
-      const group = await apiGet(`/groups/${groupId}`);
-      this.state.currentGroup = group;
-      this.state.balances = await apiGet(`/groups/${groupId}/balances`);
-      this.state.expenses = await apiGet(`/groups/${groupId}/expenses`);
+      const r = await apiGet(`/groups/${groupId}`);
+      this.state.currentGroup = r.result || r;
+      const b = await apiGet(`/groups/${groupId}/balances`);
+      this.state.balances = Array.isArray(b) ? b : b.result || [];
+      const ex = await apiGet(`/groups/${groupId}/expenses`);
+      this.state.expenses = Array.isArray(ex) ? ex : ex.result || [];
     } catch (e) {}
     this.host.requestUpdate();
   }

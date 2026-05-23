@@ -8,6 +8,13 @@
     throw new sn_ws_err.ServiceError(400, "Group name is required.");
   }
 
+  var dup = new GlideRecord("x_snc_split_group");
+  dup.addQuery("name", name);
+  dup.query();
+  if (dup.next()) {
+    throw new sn_ws_err.ServiceError(409, "A group with this name already exists.");
+  }
+
   var gr = new GlideRecord("x_snc_split_group");
   gr.initialize();
   gr.name = name;

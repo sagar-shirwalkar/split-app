@@ -80,6 +80,12 @@
       "method": "GET",
       "relative_path": "user/dashboard",
       "script": "file:get_user_dashboard.js"
+    },
+    {
+      "name": "delete_group",
+      "method": "DELETE",
+      "relative_path": "groups/{groupId}",
+      "script": "file:delete_group.js"
     }
   ]
 }

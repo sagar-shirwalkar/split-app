@@ -7,9 +7,15 @@
 
   var body = request.body.data;
   var userId = body.user_sys_id;
+  if (!userId && body.user_name) {
+    var userGr = new GlideRecord("sys_user");
+    userGr.addQuery("name", body.user_name);
+    userGr.query();
+    if (userGr.next()) userId = userGr.getUniqueValue();
+  }
   var role = body.role || "member";
 
-  if (!userId) throw new sn_ws_err.ServiceError(400, "User sys_id required.");
+  if (!userId) throw new sn_ws_err.ServiceError(400, "User sys_id or user_name required.");
 
   var existing = new GlideRecord("x_snc_split_membership");
   existing.addQuery("group", groupId);

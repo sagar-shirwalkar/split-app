@@ -115,8 +115,19 @@ export class StoreController implements ReactiveController {
     this.host.requestUpdate();
   }
 
-  async createGroup(name: string) {
-    await apiPost("/groups", { name });
+  async createGroup(name: string, description?: string, baseCurrency?: string) {
+    const r = await apiPost("/groups", {
+      name,
+      description: description || "",
+      base_currency: baseCurrency || "USD",
+    });
+    await this.loadGroups();
+    return r;
+  }
+
+  async deleteGroup(groupId: string) {
+    await apiDelete(`/groups/${groupId}`);
+    this.state.currentView = "groups";
     await this.loadGroups();
   }
 
@@ -124,6 +135,15 @@ export class StoreController implements ReactiveController {
     if (!this.state.currentGroupId) return;
     await apiPost(`/groups/${this.state.currentGroupId}/members`, {
       user_sys_id: userSysId,
+      role,
+    });
+    await this.loadGroupDetail(this.state.currentGroupId);
+  }
+
+  async addMemberByName(userName: string, role: string = "member") {
+    if (!this.state.currentGroupId) return;
+    await apiPost(`/groups/${this.state.currentGroupId}/members`, {
+      user_name: userName,
       role,
     });
     await this.loadGroupDetail(this.state.currentGroupId);

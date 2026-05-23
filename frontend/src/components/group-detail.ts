@@ -9,7 +9,33 @@ import "./record-settlement-form.js";
 @customElement("group-detail")
 export class GroupDetail extends LitElement {
   private store = new StoreController(this);
-  @state() private newMemberId = "";
+  @state() private newMemberName = "";
+  @state() private toastMessage = "";
+  @state() private toastType: "error" | "success" = "error";
+
+  private _showToast(msg: string, type: "error" | "success" = "error") {
+    this.toastMessage = msg;
+    this.toastType = type;
+    setTimeout(() => {
+      this.toastMessage = "";
+    }, 3000);
+  }
+
+  private _confirmDelete() {
+    const group = this.store.state.currentGroup;
+    if (!group) return;
+    if (confirm(`Delete "${group.name}" and all associated data? This cannot be undone.`)) {
+      this._deleteGroup();
+    }
+  }
+
+  private async _deleteGroup() {
+    try {
+      await this.store.deleteGroup(this.store.state.currentGroupId!);
+    } catch {
+      this._showToast("Failed to delete group.", "error");
+    }
+  }
 
   render() {
     const group = this.store.state.currentGroup;
@@ -21,17 +47,44 @@ export class GroupDetail extends LitElement {
     );
 
     return html`
-      <div>
+      <div class="relative">
+        ${this.toastMessage
+          ? html`
+              <div
+                class="fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-white text-sm font-semibold"
+                style="${this.toastType === "error"
+                  ? "background-color: #dc2626"
+                  : "background-color: #16a34a"}"
+              >
+                ${this.toastMessage}
+              </div>
+            `
+          : ""}
         <button
           @click=${() => this.store.navigate("groups")}
           class="text-[#4f4f4f] underline mb-2 block text-sm"
         >
           &larr; Back to groups
         </button>
-        <h2 class="text-2xl font-bold text-[#000000]">${group.name}</h2>
-        <p class="text-[#4f4f4f] mb-4">
-          ${group.description ?? ""} (${group.base_currency})
-        </p>
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 class="text-2xl font-bold text-[#000000]">${group.name}</h2>
+            <p class="text-[#4f4f4f]">
+              ${group.description ?? ""} (${group.base_currency})
+            </p>
+          </div>
+          ${isAdmin
+            ? html`
+                <button
+                  @click=${this._confirmDelete}
+                  class="px-3 py-1 rounded text-white text-sm font-semibold"
+                  style="background-color: #dc2626"
+                >
+                  Delete Group
+                </button>
+              `
+            : ""}
+        </div>
 
         <div class="bg-white shadow p-4 rounded border mb-4">
           <h3 class="font-semibold text-[#000000] mb-2">Members</h3>
@@ -59,13 +112,13 @@ export class GroupDetail extends LitElement {
                 <div class="flex gap-2 mt-2">
                   <input
                     class="border p-1 flex-1 text-sm rounded text-[#4f4f4f]"
-                    placeholder="User sys_id"
-                    .value=${this.newMemberId}
-                    @input=${(e: any) => (this.newMemberId = e.target.value)}
+                    placeholder="User name"
+                    .value=${this.newMemberName}
+                    @input=${(e: any) => (this.newMemberName = e.target.value)}
                   />
                   <button
                     @click=${this.addMember}
-                    class="px-3 py-1 rounded text-white text-sm font-semibold"
+                    class="px-3 py-1 rounded text-white text-sm font-semibold whitespace-nowrap"
                     style="background-color: #62d84e"
                   >
                     Add
@@ -102,13 +155,26 @@ export class GroupDetail extends LitElement {
   }
 
   private async addMember() {
-    if (this.newMemberId.trim()) {
-      await this.store.addMember(this.newMemberId.trim());
-      this.newMemberId = "";
+    if (!this.newMemberName.trim()) return;
+    try {
+      await this.store.addMemberByName(this.newMemberName.trim());
+      this.newMemberName = "";
+      this._showToast("Member added.", "success");
+    } catch (e: any) {
+      const msg = e.message?.includes("already a member")
+        ? "User is already a member."
+        : e.message?.includes("403")
+          ? "Only admins can add members."
+          : "User not found or could not be added.";
+      this._showToast(msg, "error");
     }
   }
 
   private async removeMember(userSysId: string) {
-    await this.store.removeMember(userSysId);
+    try {
+      await this.store.removeMember(userSysId);
+    } catch {
+      this._showToast("Failed to remove member.", "error");
+    }
   }
 }

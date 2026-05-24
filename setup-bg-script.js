@@ -85,8 +85,8 @@
       { n: "category", t: "string", ml: 40, man: true, dv: "Other" },
       { n: "payer", t: "glide_object", man: true, ref: "sys_user" },
       { n: "split_type", t: "string", ml: 20, man: true },
-      { n: "notes", t: "string", ml: 500 },
-      { n: "receipt_image", t: "string", ml: 500 },
+      { n: "notes", t: "string", ml: 100 },
+      { n: "receipt_image", t: "string" },
     ],
     x_split_share: [
       { n: "expense", t: "glide_object", man: true, ref: "x_split_expense" },
@@ -103,7 +103,7 @@
       { n: "amount", t: "decimal", man: true },
       { n: "date", t: "glide_date", man: true },
       { n: "payment_method", t: "string", ml: 100 },
-      { n: "notes", t: "string", ml: 500 },
+      { n: "notes", t: "string", ml: 100 },
     ],
   };
   results.fields = [];
@@ -214,25 +214,31 @@
       name: "post_groups",
       method: "POST",
       path: "groups",
-      script: '(function process(request, response) { var body = request.body.data; var name = body.name; var description = body.description || ""; var currency = body.base_currency || "USD"; if (!name) { throw new sn_ws_err.ServiceError(400, "Group name is required."); } var gr = new GlideRecord("x_split_group"); gr.initialize(); gr.name = name; gr.description = description; gr.base_currency = currency; gr.created_by = gs.getUserID(); var groupId = gr.insert(); var mem = new GlideRecord("x_split_membership"); mem.initialize(); mem.group = groupId; mem.user = gs.getUserID(); mem.role = "admin"; mem.insert(); response.setStatus(201); return { sys_id: groupId, name: name }; })(request, response)',
+      script: '(function process(request, response) { var body = request.body.data; var name = body.name; var description = body.description || ""; var currency = body.base_currency || "USD"; if (!name) { throw new sn_ws_err.ServiceError(400, "Group name is required."); } var dup = new GlideRecord("x_split_group"); dup.addQuery("name", name); dup.query(); if (dup.next()) { throw new sn_ws_err.ServiceError(409, "A group with this name already exists."); } var gr = new GlideRecord("x_split_group"); gr.initialize(); gr.name = name; gr.description = description; gr.base_currency = currency; gr.created_by = gs.getUserID(); var groupId = gr.insert(); var mem = new GlideRecord("x_split_membership"); mem.initialize(); mem.group = groupId; mem.user = gs.getUserID(); mem.role = "admin"; mem.insert(); response.setStatus(201); return { sys_id: groupId, name: name }; })(request, response)',
     },
     {
       name: "get_group",
       method: "GET",
       path: "groups/{groupId}",
-      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var utils = new x_split.SplitUtils(); utils.requireMembership(groupId); var gr = new GlideRecord("x_split_group"); gr.get(groupId); return { sys_id: gr.getUniqueValue(), name: gr.name.toString(), description: gr.description.toString(), base_currency: gr.base_currency.toString() }; })(request, response)',
+      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var utils = new x_split.SplitUtils(); utils.requireMembership(groupId); var gr = new GlideRecord("x_split_group"); if (!gr.get(groupId)) throw new sn_ws_err.ServiceError(404, "Group not found."); var members = []; var memGr = new GlideRecord("x_split_membership"); memGr.addQuery("group", groupId); memGr.query(); while (memGr.next()) { members.push({ sys_id: memGr.user.toString(), name: memGr.user.getDisplayValue(), role: memGr.role.toString() }); } return { sys_id: gr.getUniqueValue(), name: gr.name.toString(), description: gr.description.toString(), base_currency: gr.base_currency.toString(), members: members }; })(request, response)',
+    },
+    {
+      name: "delete_group",
+      method: "DELETE",
+      path: "groups/{groupId}",
+      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var utils = new x_split.SplitUtils(); if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can delete groups."); var settGr = new GlideRecord("x_split_settlement"); settGr.addQuery("group", groupId); settGr.deleteMultiple(); var expGr = new GlideRecord("x_split_expense"); expGr.addQuery("group", groupId); expGr.query(); while (expGr.next()) { var shareGr = new GlideRecord("x_split_share"); shareGr.addQuery("expense", expGr.getUniqueValue()); shareGr.deleteMultiple(); } expGr = new GlideRecord("x_split_expense"); expGr.addQuery("group", groupId); expGr.deleteMultiple(); var memGr = new GlideRecord("x_split_membership"); memGr.addQuery("group", groupId); memGr.deleteMultiple(); var gr = new GlideRecord("x_split_group"); gr.get(groupId); gr.deleteRecord(); return { status: "deleted" }; })(request, response)',
     },
     {
       name: "post_members",
       method: "POST",
       path: "groups/{groupId}/members",
-      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var utils = new x_split.SplitUtils(); if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can add members."); var body = request.body.data; var userId = body.user_sys_id; var role = body.role || "member"; if (!userId) throw new sn_ws_err.ServiceError(400, "User sys_id required."); var existing = new GlideRecord("x_split_membership"); existing.addQuery("group", groupId); existing.addQuery("user", userId); existing.query(); if (existing.next()) throw new sn_ws_err.ServiceError(400, "User is already a member."); var mem = new GlideRecord("x_split_membership"); mem.initialize(); mem.group = groupId; mem.user = userId; mem.role = role; mem.insert(); return { status: "added" }; })(request, response)',
+      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var utils = new x_split.SplitUtils(); if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can add members."); var body = request.body.data; var userId = body.user_sys_id; if (!userId && body.user_name) { var userGr = new GlideRecord("sys_user"); userGr.addQuery("name", body.user_name); userGr.query(); if (userGr.next()) userId = userGr.getUniqueValue(); } var role = body.role || "member"; if (!userId) throw new sn_ws_err.ServiceError(400, "User sys_id or user_name required."); var existing = new GlideRecord("x_split_membership"); existing.addQuery("group", groupId); existing.addQuery("user", userId); existing.query(); if (existing.next()) throw new sn_ws_err.ServiceError(400, "User is already a member."); var mem = new GlideRecord("x_split_membership"); mem.initialize(); mem.group = groupId; mem.user = userId; mem.role = role; mem.insert(); return { status: "added" }; })(request, response)',
     },
     {
       name: "delete_member",
       method: "DELETE",
       path: "groups/{groupId}/members/{userSysId}",
-      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var userId = request.pathParams.userSysId; var utils = new x_split.SplitUtils(); if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can remove members."); var gr = new GlideRecord("x_split_membership"); gr.addQuery("group", groupId); gr.addQuery("user", userId); gr.query(); if (gr.next()) { gr.deleteRecord(); return { status: "removed" }; } throw new sn_ws_err.ServiceError(404, "Membership not found."); })(request, response)',
+      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var userId = request.pathParams.userSysId; var utils = new x_split.SplitUtils(); if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can remove members."); var calc = new x_split.BalanceCalculator(); var balances = calc.getGroupBalances(groupId); for (var i = 0; i < balances.length; i++) { var b = balances[i]; if (b.from_user === userId || b.to_user === userId) throw new sn_ws_err.ServiceError(400, "Cannot remove a member with outstanding balances."); } var gr = new GlideRecord("x_split_membership"); gr.addQuery("group", groupId); gr.addQuery("user", userId); gr.query(); if (gr.next()) { gr.deleteRecord(); return { status: "removed" }; } throw new sn_ws_err.ServiceError(404, "Membership not found."); })(request, response)',
     },
     {
       name: "post_expenses",
@@ -274,13 +280,13 @@
       name: "post_settlements",
       method: "POST",
       path: "groups/{groupId}/settlements",
-      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var body = request.body.data; body.group = groupId; var proc = new x_split.SettlementProcessor(); var settlementId = proc.createSettlement(body); response.setStatus(201); return { sys_id: settlementId }; })(request, response)',
+      script: '(function process(request, response) { var groupId = request.pathParams.groupId; var body = request.body.data; body.group = groupId; var proc = new x_split.SettlementProcessor(); proc.recordSettlement(body); return { status: "recorded" }; })(request, response)',
     },
     {
       name: "get_user_dashboard",
       method: "GET",
       path: "user/dashboard",
-      script: '(function process(request, response) { var userId = gs.getUserID(); var groups = []; var memGr = new GlideRecord("x_split_membership"); memGr.addQuery("user", userId); memGr.query(); while (memGr.next()) { var gr = new GlideRecord("x_split_group"); gr.get(memGr.group.toString()); groups.push({sys_id: gr.getUniqueValue(), name: gr.name.toString(), role: memGr.role.toString()}); } var totalOwed = 0; var totalOwe = 0; var calc = new x_split.BalanceCalculator(); for (var i = 0; i < groups.length; i++) { var balances = calc.getGroupBalances(groups[i].sys_id); for (var j = 0; j < balances.length; j++) { if (balances[j].user_sys_id === userId) { var net = parseFloat(balances[j].net) || 0; if (net > 0) totalOwed += net; else totalOwe += Math.abs(net); } } } return { user_id: userId, groups: groups, totals: { you_are_owed: totalOwed.toFixed(2), you_owe: totalOwe.toFixed(2) } }; })(request, response)',
+      script: '(function process(request, response) { var calc = new x_split.BalanceCalculator(); var dash = calc.getUserDashboard(gs.getUserID()); dash.current_user = gs.getUserID(); return dash; })(request, response)',
     },
   ];
 

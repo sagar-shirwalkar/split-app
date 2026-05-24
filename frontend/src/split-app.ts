@@ -15,7 +15,7 @@ export class SplitApp extends LitElement {
       <div class="min-h-screen bg-white">
         <header class="bg-[#032d42] text-white p-4" style="background-color: #032d42">
           <h1
-            class="text-2xl font-bold cursor-pointer"
+            class="text-2xl font-bold cursor-pointer text-white"
             @click=${() => this.store.navigate("dashboard")}
           >
             SplitApp

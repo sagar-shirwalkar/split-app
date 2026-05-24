@@ -27,6 +27,7 @@ declare global {
       "split-api-get-balances": "split-api-get-balances";
       "split-api-post-settlements": "split-api-post-settlements";
       "split-api-get-dashboard": "split-api-get-dashboard";
+      "split-api-delete-group": "split-api-delete-group";
       "split-ui-page": "split-ui-page";
     }
   }

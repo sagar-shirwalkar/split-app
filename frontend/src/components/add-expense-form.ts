@@ -59,18 +59,19 @@ export class AddExpenseForm extends LitElement {
             required
           />
 
-          <div class="relative mb-2">
-            <span class="absolute left-3 top-2 text-[#4f4f4f] font-semibold">$</span>
+          <div class="mb-2">
             <input
-              class="border p-2 pl-7 w-full rounded text-[#4f4f4f]"
-              type="number"
-              step="0.01"
-              min="0"
+              class="border p-2 w-full rounded text-[#4f4f4f]"
+              type="text"
+              inputmode="decimal"
               placeholder="0.00"
               .value=${this.amount}
               @input=${(e: any) => {
-                const val = e.target.value;
-                if (val.includes(".") && val.split(".")[1].length > 2) return;
+                let val = e.target.value;
+                val = val.replace(/[^0-9.]/g, "");
+                const parts = val.split(".");
+                if (parts.length > 2) val = parts[0] + "." + parts.slice(1).join("");
+                if (parts.length === 2 && parts[1].length > 2) val = parts[0] + "." + parts[1].slice(0, 2);
                 this.amount = val;
               }}
               required
@@ -180,7 +181,7 @@ export class AddExpenseForm extends LitElement {
             placeholder="Notes (optional)"
             .value=${this.notes}
             @input=${(e: any) => (this.notes = e.target.value)}
-            maxlength="500"
+            maxlength="100"
             rows="2"
           ></textarea>
 

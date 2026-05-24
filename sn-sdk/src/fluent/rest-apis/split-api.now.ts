@@ -49,6 +49,10 @@ RestApi({
   var description = body.description || "";
   var currency = body.base_currency || "USD";
   if (!name) throw new sn_ws_err.ServiceError(400, "Group name is required.");
+  var dup = new GlideRecord("x_snc_split_group");
+  dup.addQuery("name", name);
+  dup.query();
+  if (dup.next()) throw new sn_ws_err.ServiceError(409, "A group with this name already exists.");
   var gr = new GlideRecord("x_snc_split_group");
   gr.initialize();
   gr.name = name;
@@ -100,8 +104,14 @@ RestApi({
   if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can add members.");
   var body = request.body.data;
   var userId = body.user_sys_id;
+  if (!userId && body.user_name) {
+    var userGr = new GlideRecord("sys_user");
+    userGr.addQuery("name", body.user_name);
+    userGr.query();
+    if (userGr.next()) userId = userGr.getUniqueValue();
+  }
   var role = body.role || "member";
-  if (!userId) throw new sn_ws_err.ServiceError(400, "User sys_id required.");
+  if (!userId) throw new sn_ws_err.ServiceError(400, "User sys_id or user_name required.");
   var existing = new GlideRecord("x_snc_split_membership");
   existing.addQuery("group", groupId);
   existing.addQuery("user", userId);
@@ -299,6 +309,39 @@ RestApi({
   var dash = calc.getUserDashboard(gs.getUserID());
   dash.current_user = gs.getUserID();
   return dash;
+})(request, response);`,
+    },
+    {
+      $id: Now.ID["split-api-delete-group"],
+      name: "delete_group",
+      method: "DELETE",
+      path: "groups/{groupId}",
+      script: `
+(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+  var groupId = request.pathParams.groupId;
+  var utils = new x_snc_split.SplitUtils();
+  if (!utils.isAdmin(groupId)) throw new sn_ws_err.ServiceError(403, "Only group admins can delete groups.");
+  var settGr = new GlideRecord("x_snc_split_settlement");
+  settGr.addQuery("group", groupId);
+  settGr.deleteMultiple();
+  var expGr = new GlideRecord("x_snc_split_expense");
+  expGr.addQuery("group", groupId);
+  expGr.query();
+  while (expGr.next()) {
+    var shareGr = new GlideRecord("x_snc_split_share");
+    shareGr.addQuery("expense", expGr.getUniqueValue());
+    shareGr.deleteMultiple();
+  }
+  expGr = new GlideRecord("x_snc_split_expense");
+  expGr.addQuery("group", groupId);
+  expGr.deleteMultiple();
+  var memGr = new GlideRecord("x_snc_split_membership");
+  memGr.addQuery("group", groupId);
+  memGr.deleteMultiple();
+  var gr = new GlideRecord("x_snc_split_group");
+  gr.get(groupId);
+  gr.deleteRecord();
+  return { status: "deleted" };
 })(request, response);`,
     },
   ],

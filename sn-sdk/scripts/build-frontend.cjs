@@ -58,6 +58,7 @@ function main() {
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>SplitApp</title>
+    <sdk:now-ux-globals></sdk:now-ux-globals>
     <style>${css}</style>
     <script src="split_app_main.jsx?uxpcb=$[UxFrameworkScriptables.getFlushTimestamp()]" type="module"></script>
   </head>

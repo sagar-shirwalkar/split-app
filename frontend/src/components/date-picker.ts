@@ -12,8 +12,19 @@ export class DatePicker extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    if (this.value) {
-      const parts = this.value.split("-");
+    this._parseValue();
+  }
+
+  updated(changedProperties: Map<string, unknown>) {
+    if (changedProperties.has("value")) {
+      this._parseValue();
+    }
+  }
+
+  private _parseValue() {
+    const val = typeof this.value === "string" ? this.value : "";
+    if (val) {
+      const parts = val.split("-");
       if (parts.length === 3) {
         this._year = parts[0];
         this._month = parts[1];

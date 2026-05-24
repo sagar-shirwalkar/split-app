@@ -2,7 +2,23 @@ import { LitElement } from "lit";
 import "./index.css";
 import "./split-app";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(LitElement.prototype as any).createRenderRoot = function (this: HTMLElement) {
-  return this;
+let _sharedCSS = "";
+
+function _captureStyles() {
+  if (_sharedCSS) return;
+  for (const s of document.querySelectorAll("style")) {
+    _sharedCSS += s.textContent || "";
+  }
+}
+_captureStyles();
+
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+(LitElement.prototype as any).createRenderRoot = function () {
+  const root = this.attachShadow({ mode: "open" });
+  if (_sharedCSS) {
+    const style = document.createElement("style");
+    style.textContent = _sharedCSS;
+    root.appendChild(style);
+  }
+  return root;
 };

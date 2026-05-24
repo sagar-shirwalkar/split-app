@@ -1,10 +1,13 @@
 const envBase = import.meta.env.VITE_API_BASE as string | undefined;
-let BASE = envBase || "/api/x_split";
+let BASE = envBase || "/api/x_snc_split/x_snc_split";
 
 export async function discoverApiBase(): Promise<string> {
   try {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if ((window as any).g_ck) headers["X-UserToken"] = (window as any).g_ck;
     const res = await fetch(
-      "/api/now/table/sys_ws_definition?sysparm_query=name=split_api&sysparm_fields=base_uri&sysparm_limit=1"
+      "/api/now/table/sys_ws_definition?sysparm_query=name=split_api&sysparm_fields=base_uri&sysparm_limit=1",
+      { headers, credentials: "include" }
     );
     const data = await res.json();
     if (data.result?.length > 0 && data.result[0].base_uri) {
@@ -16,9 +19,11 @@ export async function discoverApiBase(): Promise<string> {
 }
 
 async function request(method: string, path: string, data?: any): Promise<any> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if ((window as any).g_ck) headers["X-UserToken"] = (window as any).g_ck;
   const opts: RequestInit = {
     method,
-    headers: { Accept: "application/json", "X-UserToken": (window as any).g_ck || "" },
+    headers,
     credentials: "include",
   };
   if (data !== undefined) {

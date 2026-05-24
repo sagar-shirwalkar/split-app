@@ -17,8 +17,11 @@ _captureStyles();
   const root = this.attachShadow({ mode: "open" });
   if (_sharedCSS) {
     const style = document.createElement("style");
-    style.textContent = _sharedCSS;
+    style.textContent = ":host{display:block;width:100%}" + _sharedCSS;
     root.appendChild(style);
   }
+  (this as any).renderOptions.renderBefore = root.lastChild
+    ? root.lastChild.nextSibling
+    : root.firstChild;
   return root;
 };

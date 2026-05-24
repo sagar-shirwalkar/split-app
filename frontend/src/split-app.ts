@@ -22,7 +22,7 @@ export class SplitApp extends LitElement {
             SplitApp
           </h1>
         </header>
-        <main class="p-4 mx-auto" style="max-width: 640px">
+        <main class="p-4" style="max-width: 640px; margin: 0 auto">
           ${currentView === "dashboard"
             ? html`<user-dashboard></user-dashboard>`
             : ""}

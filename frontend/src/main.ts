@@ -17,7 +17,7 @@ _captureStyles();
   const root = this.attachShadow({ mode: "open" });
   if (_sharedCSS) {
     const style = document.createElement("style");
-    style.textContent = ":host{display:block;width:100%}" + _sharedCSS;
+    style.textContent = ":host{display:block;width:100%;max-width:100%}input,select,textarea{border-color:#9ca3af}input:focus,select:focus,textarea:focus{outline:2px solid #3b82f6;outline-offset:-2px;border-color:#3b82f6!important}" + _sharedCSS;
     root.appendChild(style);
   }
   (this as any).renderOptions.renderBefore = root.lastChild

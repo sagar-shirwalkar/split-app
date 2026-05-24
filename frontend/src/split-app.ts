@@ -15,13 +15,14 @@ export class SplitApp extends LitElement {
       <div class="min-h-screen bg-white">
         <header class="bg-[#032d42] text-white p-4" style="background-color: #032d42">
           <h1
-            class="text-2xl font-bold cursor-pointer text-white"
+            class="text-xl font-semibold cursor-pointer"
+            style="color: #ffffff"
             @click=${() => this.store.navigate("dashboard")}
           >
             SplitApp
           </h1>
         </header>
-        <main class="p-4 max-w-3xl mx-auto">
+        <main class="p-4 mx-auto" style="max-width: 640px">
           ${currentView === "dashboard"
             ? html`<user-dashboard></user-dashboard>`
             : ""}

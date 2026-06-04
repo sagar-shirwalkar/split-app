@@ -160,6 +160,207 @@ All under the discovered `base_uri` (e.g., `/api/x_{company_code}_split/x_{compa
 
 A Personal Developer Instance (PDI) is a free ServiceNow sandbox for development. You can request one at [developer.servicenow.com](https://developer.servicenow.com).
 
+## Deploying to a Local ServiceNow Instance (gll)
+
+You can also deploy SplitApp to a locally running ServiceNow instance using `gll start`. This is useful for development and testing without consuming a PDI.
+
+### Prerequisites
+
+- A locally running ServiceNow instance started with `gll start` (accessible at `https://localhost:8080`)
+- Admin credentials for the local instance (default: admin/admin)
+- Node.js >= 20 (tested with v22.14.0), npm (tested with 11.4.2)
+
+### Deployment Method 1 (Background Script) - Local Instance
+
+This method uses the same Background Script approach as for PDIs, targeting your local instance.
+
+1. **Install Node dependencies** (if not already done):
+   ```bash
+   npm install
+   cd frontend && npm install && cd ..
+   ```
+
+2. **One-time bootstrap (Background Script)**:
+   Since the Background Scripts UI may not be accessible on local instances, you can run the bootstrap via REST:
+   ```bash
+   # Note: This requires the instance to accept REST API calls to bootstrap endpoints
+   # If this fails, you may need to manually paste setup-bg-script.js into the Background Scripts UI
+   curl -X POST "https://localhost:8080/api/now/script" \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json" \
+        -u admin:admin \
+        -d @setup-bg-script.js
+   ```
+
+3. **Deploy script includes and API updates**:
+   ```bash
+   node deploy.js https://localhost:8080 admin admin
+   ```
+
+4. **Verify the REST API**:
+   ```bash
+   curl -s --user admin:admin \
+     "https://localhost:8080/api/x_split/user/dashboard"
+   ```
+   Expected response: `{"user_id":"...","groups":[],"totals":{"you_are_owed":"0.00","you_owe":"0.00"}}`
+
+5. **Deploy the frontend** (as UI Page via SDK):
+   ```bash
+   # First setup scope for local instance
+   node scripts/setup-local-scope.js https://localhost:8080 admin admin
+   # Then build and install
+   cd sn-sdk && npm run deploy:all
+   ```
+
+6. **Verify the full app**:
+   Access at: `https://localhost:8080/x_split_split_app.do`
+
+### Deployment Method 2 (SDK) - Local Instance
+
+This method uses the @servicenow/sdk for faster repeat deployments to your local instance.
+
+#### Prerequisites
+
+- Node.js >= 20 (tested with v22.14.0), npm (tested with 11.4.2)
+- Admin credentials for the local instance
+- **ServiceNow IDE plugin** (`sn_glider`) v4.1.1+ installed on the local instance
+- **Scoped App Client** (`sn_appclient`) v29.0.4+ active on the local instance
+- Local instance must be Australia or later (confirmed for `gll`)
+
+#### Step-by-Step
+
+1. **Run the scope setup script**:
+   ```bash
+   node scripts/setup-local-scope.js https://localhost:8080 admin admin
+   ```
+
+2. **Set up the SDK project**:
+   ```bash
+   cd sn-sdk && npm install
+   ```
+
+3. **Authenticate**:
+   ```bash
+   cd sn-sdk && npx @servicenow/sdk auth --add https://localhost:8080 --type basic
+   ```
+
+4. **Build and install (frontend + backend)**:
+   ```bash
+   cd sn-sdk && npm run deploy:all
+   ```
+
+5. **Verify the full app**:
+   Access at: `https://localhost:8080/x_{company_code}_split_split_app.do`
+   (where `{company_code}` is your instance's `glide.appcreator.company.code`)
+
+#### Re-deploying after code changes
+
+- **Backend-only changes**:
+  ```bash
+  cd sn-sdk && npx now-sdk build && npx now-sdk install
+  ```
+
+- **Frontend-only changes**:
+  ```bash
+  cd sn-sdk && npm run build:frontend && npx now-sdk build && npx now-sdk install
+  ```
+
+- **Both frontend and backend changes**:
+  ```bash
+  cd sn-sdk && npm run deploy:all
+  ```
+
+## Deploying via Now Experience (Seismic)
+
+You can deploy SplitApp as a Now Experience (Seismic) component, which works on both PDI and local instances.
+
+### Prerequisites
+
+- Node.js >= 20 (tested with v22.14.0), npm (tested with 11.4.2)
+- @servicenow/cli installed (comes with seismic-wrapper)
+- Target instance (PDI or local) must support Now Experience Framework
+
+### Two Deployment Approaches
+
+SplitApp supports two Seismic deployment approaches that can be used interchangeably:
+
+1. **Runtime-loaded Lit** (default, preserves existing behavior):
+   - Lit bundle loaded from `sys_ux_lib_asset` at runtime
+   - Allows independent updates to Lit component
+   - Slightly more complex deployment
+
+2. **Bundled Lit** (new, preferred for simplicity):
+   - Lit bundle and CSS compiled directly into Seismic component
+   - Single deploy artifact, simpler deployment
+   - Lit updates require Seismic rebuild
+
+### Step-by-Step (Runtime-loaded - Default)
+
+1. **Install seismic dependencies**:
+   ```bash
+   cd seismic-wrapper && npm install
+   ```
+
+2. **Configure local instance proxy** (for development):
+   Edit `seismic-wrapper/now-cli.json` to point to your instance:
+   ```json
+   {
+     "proxy": {
+       "origin": "https://localhost:8080",
+       "headers": {
+         "Authorization": "Basic YWRtaW46YWRtaW4="
+       },
+       "proxies": ["/api", "/amb"]
+     }
+   }
+   ```
+
+3. **Build the Seismic component**:
+   ```bash
+   # Default: runtime-loaded Lit
+   npm run seismic:build
+   # Or explicitly:
+   SEISMIC_LIT_MODE=runtime npm run seismic:build
+   ```
+
+4. **Develop locally** (hot reload):
+   ```bash
+   # Default: runtime-loaded Lit
+   npm run seismic:dev
+   # Or explicitly:
+   SEISMIC_LIT_MODE=runtime npm run seismic:dev
+   ```
+   This starts the Seismic dev server at http://localhost:8081 (or similar) and proxies API requests to your ServiceNow instance.
+
+5. **Deploy to instance**:
+   ```bash
+   # Default: runtime-loaded Lit
+   npm run seismic:deploy
+   # Or explicitly:
+   SEISMIC_LIT_MODE=runtime npm run seismic:deploy
+   ```
+
+### Step-by-Step (Bundled Lit)
+
+1. **Build the Seismic component in bundled mode**:
+   ```bash
+   npm run seismic:build:bundled
+   ```
+
+2. **Develop locally** (hot reload):
+   ```bash
+   npm run seismic:dev:bundled
+   ```
+
+3. **Deploy to instance**:
+   ```bash
+   npm run seismic:deploy:bundled
+   ```
+
+### Verification
+
+After deployment, add the "Split App Host" component to any Now Experience page (Workspace, Landing Page, etc.) via UI Builder to see the full SplitApp.
+
 ### Prerequisites
 
 - A ServiceNow PDI (e.g., `https://dev123456.service-now.com`)
@@ -514,6 +715,12 @@ This section captures every ServiceNow-specific quirk, workaround, and conventio
 | 15 | **Auth / Session** | All API calls return 401 even with correct `X-UserToken` logic | The UiPage HTML shell was missing `<sdk:now-ux-globals>`. Without it, `window.g_ck` is never populated, so no CSRF token is ever sent. | Add `<sdk:now-ux-globals>` to the `<head>` of the HTML shell template in `build-frontend.cjs`. Jelly processes this tag server-side and injects the `g_ck` value. | `sn-sdk/scripts/build-frontend.cjs` |
 | 16 | **CSS / Layout** | Content stays left-aligned despite `mx-auto` class on `<main>` | Tailwind's `mx-auto` generates `margin-left: auto; margin-right: auto` inside `@layer utilities`, which has lower cascade priority than unlayered styles inside Shadow DOM. The prepended `:host{display:block;width:100%}` rule (unlayered) inadvertently wins the cascade over the layered utility, nullifying the centering. | Drop `mx-auto` from the class; use inline `style="margin: 0 auto"` on the `<main>` element. Inline styles always beat layered or unlayered stylesheets, guaranteeing centering regardless of CSS layer resolution. | `frontend/src/split-app.ts` |
 | 17 | **Deployment** | Source code changes to `frontend/src/` don't appear in the deployed app | The deploy pipeline has 3 stages: (1) `build-frontend.cjs` compiles TypeScript → `sn-sdk/src/client/split_app_main.jsx`, (2) `now-sdk build` bundles `.jsx` → `.jsdbx` in `dist/static/`, (3) `now-sdk install` uploads to the instance. Running only stages 2+3 pushes the stale `.jsx` — the source changes were never compiled. | Always use `npm run deploy:all` which runs all 3 stages. After each deploy, verify the fix is present: `rg 'fix-pattern' sn-sdk/dist/static/split_app_main.jsdbx`. The `dist/static/` files are the ground truth of what was actually deployed. | `package.json` (`deploy:all` script) |
+| **Seismic: Component not showing in UI Builder** | Ensure you've run `npm run seismic:build` (or bundled variant) and deployed with `npm run seismic:deploy`. Check that the component is deployed to the correct scope. |
+| **Seismic: Lit component not rendering** | Verify that the Lit bundle is loading correctly. Check browser console for errors. In bundled mode, ensure assets are present in `seismic-wrapper/x-snc-split-app-host/assets/`. In runtime mode, ensure `sys_ux_lib_asset` exists. |
+| **Seismic: API calls failing** | Check `now-cli.json` proxy configuration. Ensure `NODE_TLS_REJECT_UNAUTHORIZED=0` is set if using self-signed certs. Verify the instance URL is correct. |
+| **Local instance (gll): Connection refused** | Ensure `gll start` is running and accessible at `https://localhost:8080`. Verify the instance is fully started before attempting deployment. |
+| **Local instance: Scope mismatch errors** | Run `node scripts/setup-local-scope.js https://localhost:8080 admin admin` to adjust scope prefix to match local instance's company code. |
+| **Local mode: SSL certificate errors** | Set `NODE_TLS_REJECT_UNAUTHORIZED=0` in your environment when running commands that connect to the local instance. |
 
 ## Running Locally (Development)
 

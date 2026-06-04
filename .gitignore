@@ -1,6 +1,7 @@
 node_modules
 dist
 .env
+.kilo
 
 # SDK build artifacts (instance-specific metadata, packaged zips)
 sn-sdk/target/

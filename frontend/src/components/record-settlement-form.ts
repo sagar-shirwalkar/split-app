@@ -101,7 +101,7 @@ export class RecordSettlementForm extends LitElement {
                 required
               >
                 <option value="">Select recipient</option>
-                ${this.members.map(
+                ${(Array.isArray(this.members) ? this.members : []).map(
                   (m: any) =>
                     html`<option value=${m.sys_id}>${m.name}</option>`,
                 )}

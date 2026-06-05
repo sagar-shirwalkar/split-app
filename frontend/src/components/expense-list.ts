@@ -29,7 +29,8 @@ export class ExpenseList extends LitElement {
   @property({ type: String }) currency = "USD";
 
   render() {
-    if (!this.expenses || this.expenses.length === 0) {
+    const expenses = Array.isArray(this.expenses) ? this.expenses : [];
+    if (expenses.length === 0) {
       return html`
         <empty-state
           title="No expenses yet"
@@ -40,7 +41,7 @@ export class ExpenseList extends LitElement {
 
     return html`
       <ul class="card divide-y divide-ink-200">
-        ${this.expenses.map((exp) => {
+        ${expenses.map((exp) => {
           const cat = categoryFor(exp.category);
           return html`
             <li class="px-4 py-3">

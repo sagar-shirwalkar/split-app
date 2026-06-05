@@ -13,12 +13,16 @@ export class BalanceSummary extends LitElement {
   @property({ type: String }) currentUserId = "";
 
   private _name(sysId: string) {
-    const m = this.members.find((m: any) => m.sys_id === sysId);
+    const members = Array.isArray(this.members) ? this.members : [];
+    const m = members.find((m: any) => m.sys_id === sysId);
     return m ? m.name : sysId;
   }
 
   render() {
-    if (!this.balances || this.balances.length === 0) {
+    const balances = Array.isArray(this.balances) ? this.balances : [];
+    const members = Array.isArray(this.members) ? this.members : [];
+
+    if (balances.length === 0) {
       return html`
         <empty-state
           title="All settled up"
@@ -29,7 +33,7 @@ export class BalanceSummary extends LitElement {
 
     return html`
       <ul class="card divide-y divide-ink-200">
-        ${this.balances.map(
+        ${balances.map(
           (b) => html`
             <li
               class="flex items-center gap-3 px-4 py-3"

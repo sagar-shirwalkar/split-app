@@ -837,19 +837,42 @@ The Lit UI is also deployable as a [Seismic](https://developer.servicenow.com/de
 A Seismic custom element is the standard way to ship UI on Now Experience. The SplitApp can't be expressed as a single Seismic component because the Lit runtime owns a `customElements` registry and a Shadow DOM tree — these need a stable host to mount under. The fix is the **Transplant Host** pattern: a Seismic element whose only job is to load an inner framework and mount its root.
 
 ```mermaid
-flowchart TB
-    WS["Seismic Workspace<br/>(sys_ux_app_config → sys_ux_screen)"]
-    HOST["&lt;x-snc-split-app-host&gt;<br/><b>Transplant Host</b><br/>• view() returns empty mount div<br/>• loads Lit bundle at runtime<br/>• createElement('split-app') synchronously mounts"]
-    ROOT["&lt;split-app&gt;<br/><b>Lit root element</b>"]
-    CHILD["&lt;group-list&gt;, &lt;group-detail&gt;,<br/>&lt;add-expense-form&gt;, …"]
+flowchart LR
+    subgraph SEISMIC["Seismic Framework Boundary"]
+        direction TB
+        WS["<b>Seismic Workspace</b><br/>sys_ux_app_config<br/>sys_ux_screen<br/>sys_ux_macroponent<br/><br/><i>base_url_path: /now/split-app</i>"]
+        HOST["&lt;x-snc-split-app-host&gt;<br/><b>Transplant Host</b><br/><i>Seismic custom element</i>"]
+    end
 
-    WS -->|"mounts"| HOST
-    HOST -->|"createElement"| ROOT
-    ROOT -->|"contains"| CHILD
+    subgraph LIT["Lit Framework Boundary"]
+        direction TB
+        ROOT["&lt;split-app&gt;<br/><b>Lit root element</b><br/><br/><i>@property: groups</i><br/><i>State: store.ts singleton</i>"]
+        CHILD["&lt;group-list&gt; · &lt;group-detail&gt;<br/>&lt;add-expense-form&gt; · &lt;expense-list&gt;<br/>&lt;balance-summary&gt; · &lt;settlement-form&gt;<br/>&lt;date-picker&gt; · &lt;user-dashboard&gt;"]
+    end
 
-    HOST -.->|"@property (down)"| ROOT
-    ROOT -.->|"composed CustomEvent (up)"| HOST
+    %% Mount flow — thick solid arrows, numbered
+    WS ==>|"<b>① mount</b><br/>screen renders macroponent"| HOST
+    HOST ==>|"<b>② fetch bundle</b><br/>/api/now/ux/asset/{scope}/split_app_main?v={hash}"| ROOT
+    HOST -->|"<b>③ createElement</b><br/>el.appendChild(litEl)"| ROOT
+    ROOT -->|"<b>④ contains</b>"| CHILD
+
+    %% Data channels — dashed arrows, lettered
+    HOST -.->|"<b>A · @property (down)</b><br/>litEl.groups = []"| ROOT
+    ROOT -.->|"<b>B · CustomEvent (up)</b><br/>composed: true"| HOST
+
+    %% Color themes
+    classDef wsNode fill:#dbeafe,stroke:#1e40af,stroke-width:2px,color:#1e3a8a
+    classDef hostNode fill:#fed7aa,stroke:#c2410c,stroke-width:2.5px,color:#7c2d12
+    classDef rootNode fill:#d1fae5,stroke:#047857,stroke-width:2px,color:#064e3b
+    classDef childNode fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,color:#1f2937
+
+    class WS wsNode
+    class HOST hostNode
+    class ROOT rootNode
+    class CHILD childNode
 ```
+
+**Diagram legend.** Numbered (①②③④) thick solid arrows show the **mount flow** — the order in which the workspace is brought up at runtime. Lettered (A, B) dashed arrows show the **data channels** — how the host and the Lit subtree communicate after mount. Color bands inside the boxes denote framework ownership: blue = Seismic's, orange = the host bridge, green = Lit's, gray = Lit's children. The two outer boxes are the two framework boundaries — the host is the only thing that crosses them.
 
 The Seismic framework owns the host's render tree (the workspace chrome and the empty mount div). The Lit framework owns everything inside `<split-app>`. The two never reach into each other's DOM. Communication is via `CustomEvent` with `composed: true` (Lit → host) and the `@property` mechanism (host → Lit).
 

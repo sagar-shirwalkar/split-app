@@ -1,39 +1,49 @@
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
+
+const MONTHS = [
+  { value: "01", label: "Jan" },
+  { value: "02", label: "Feb" },
+  { value: "03", label: "Mar" },
+  { value: "04", label: "Apr" },
+  { value: "05", label: "May" },
+  { value: "06", label: "Jun" },
+  { value: "07", label: "Jul" },
+  { value: "08", label: "Aug" },
+  { value: "09", label: "Sep" },
+  { value: "10", label: "Oct" },
+  { value: "11", label: "Nov" },
+  { value: "12", label: "Dec" },
+];
 
 @customElement("date-picker")
 export class DatePicker extends LitElement {
   @property({ type: String }) value = "";
   @property({ type: Boolean }) required = false;
 
-  private _month = "";
-  private _day = "";
-  private _year = "";
+  @state() private _year = "";
+  @state() private _month = "";
+  @state() private _day = "";
 
-  connectedCallback() {
-    super.connectedCallback();
-    this._parseValue();
-  }
-
-  updated(changedProperties: Map<string, unknown>) {
-    if (changedProperties.has("value")) {
-      this._parseValue();
+  willUpdate(changed: Map<string, unknown>) {
+    if (changed.has("value")) {
+      this._parse();
     }
   }
 
-  private _parseValue() {
+  private _parse() {
     const val = typeof this.value === "string" ? this.value : "";
-    if (val) {
-      const parts = val.split("-");
-      if (parts.length === 3) {
-        this._year = parts[0];
-        this._month = parts[1];
-        this._day = parts[2];
-      }
+    if (!val) {
+      this._year = this._month = this._day = "";
+      return;
     }
+    const [y, m, d] = val.split("-");
+    this._year = y || "";
+    this._month = m || "";
+    this._day = d || "";
   }
 
-  private _emitChange() {
+  private _emit() {
     if (this._year && this._month && this._day) {
       this.value = `${this._year}-${this._month.padStart(2, "0")}-${this._day.padStart(2, "0")}`;
     } else {
@@ -51,55 +61,39 @@ export class DatePicker extends LitElement {
   render() {
     const years: number[] = [];
     const currentYear = new Date().getFullYear();
-    for (let y = currentYear; y >= 2000; y--) {
-      years.push(y);
-    }
+    for (let y = currentYear; y >= 2000; y--) years.push(y);
 
-    const months = [
-      { value: "01", label: "January" },
-      { value: "02", label: "February" },
-      { value: "03", label: "March" },
-      { value: "04", label: "April" },
-      { value: "05", label: "May" },
-      { value: "06", label: "June" },
-      { value: "07", label: "July" },
-      { value: "08", label: "August" },
-      { value: "09", label: "September" },
-      { value: "10", label: "October" },
-      { value: "11", label: "November" },
-      { value: "12", label: "December" },
-    ];
-
-    const daysInMonth = this._year && this._month
-      ? new Date(parseInt(this._year), parseInt(this._month), 0).getDate()
-      : 31;
+    const daysInMonth =
+      this._year && this._month
+        ? new Date(parseInt(this._year), parseInt(this._month), 0).getDate()
+        : 31;
     const days: number[] = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-      days.push(d);
-    }
+    for (let d = 1; d <= daysInMonth; d++) days.push(d);
 
     return html`
       <div class="flex gap-1">
         <select
-          class="border p-2 text-sm text-[#4f4f4f] bg-white rounded w-28"
+          class="select w-20"
+          aria-label="Month"
           .value=${this._month}
           @change=${(e: any) => {
             this._month = e.target.value;
             if (parseInt(this._day) > daysInMonth) this._day = "";
-            this._emitChange();
+            this._emit();
           }}
         >
           <option value="">Month</option>
-          ${months.map(
+          ${MONTHS.map(
             (m) => html`<option value=${m.value}>${m.label}</option>`,
           )}
         </select>
         <select
-          class="border p-2 text-sm text-[#4f4f4f] bg-white rounded w-16"
+          class="select w-16"
+          aria-label="Day"
           .value=${this._day}
           @change=${(e: any) => {
             this._day = e.target.value;
-            this._emitChange();
+            this._emit();
           }}
         >
           <option value="">Day</option>
@@ -108,18 +102,17 @@ export class DatePicker extends LitElement {
           )}
         </select>
         <select
-          class="border p-2 text-sm text-[#4f4f4f] bg-white rounded w-24"
+          class="select w-20"
+          aria-label="Year"
           .value=${this._year}
           @change=${(e: any) => {
             this._year = e.target.value;
             if (parseInt(this._day) > daysInMonth) this._day = "";
-            this._emitChange();
+            this._emit();
           }}
         >
           <option value="">Year</option>
-          ${years.map(
-            (y) => html`<option value=${y}>${y}</option>`,
-          )}
+          ${years.map((y) => html`<option value=${y}>${y}</option>`)}
         </select>
       </div>
     `;

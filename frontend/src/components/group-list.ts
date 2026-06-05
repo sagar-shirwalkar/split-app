@@ -1,6 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { StoreController } from "../store/store.js";
+import { toast } from "./toast.js";
+import { icon } from "./icons.js";
+import "./avatar.js";
+import "./empty-state.js";
+import "./section-header.js";
 
 @customElement("group-list")
 export class GroupList extends LitElement {
@@ -8,107 +13,182 @@ export class GroupList extends LitElement {
   @state() private newGroupName = "";
   @state() private newGroupDesc = "";
   @state() private newGroupCurrency = "USD";
-  @state() private toastMessage = "";
-  @state() private toastType: "error" | "success" = "error";
+  @state() private creating = false;
 
-  private _showToast(msg: string, type: "error" | "success" = "error") {
-    this.toastMessage = msg;
-    this.toastType = type;
-    setTimeout(() => {
-      this.toastMessage = "";
-    }, 3000);
+  private async _create() {
+    if (!this.newGroupName.trim()) return;
+    this.creating = true;
+    try {
+      await this.store.createGroup(
+        this.newGroupName.trim(),
+        this.newGroupDesc.trim(),
+        this.newGroupCurrency,
+      );
+      this.newGroupName = "";
+      this.newGroupDesc = "";
+      toast("Group created", "success");
+    } catch (e: any) {
+      const msg =
+        e.message?.includes("409") || e.message?.includes("already exists")
+          ? "A group with this name already exists."
+          : "Failed to create group.";
+      toast(msg, "error");
+    } finally {
+      this.creating = false;
+    }
   }
 
   render() {
+    const groups = this.store.state.groups;
     return html`
-      <div class="relative">
-        ${this.toastMessage
-          ? html`
-              <div
-                class="fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-white text-sm font-semibold transition-opacity"
-                style="${this.toastType === "error"
-                  ? "background-color: #dc2626"
-                  : "background-color: #16a34a"}"
+      <div class="space-y-6">
+        <section>
+          <p class="label-eyebrow">All groups</p>
+          <h1
+            class="mt-1 text-2xl font-semibold tracking-tight text-ink-900"
+          >
+            My groups
+          </h1>
+          <p class="mt-1 text-sm text-ink-500">
+            ${groups.length === 0
+              ? "Track shared expenses with friends, trips, or roommates."
+              : `${groups.length} active group${groups.length === 1 ? "" : "s"}.`}
+          </p>
+        </section>
+
+        <section>
+          <section-header eyebrow="New" title="Create a group">
+            <span slot="action"></span>
+          </section-header>
+
+          <div class="card card-pad space-y-3">
+            <div>
+              <label
+                for="grp-name"
+                class="block text-xs font-medium text-ink-700 mb-1"
+                >Name</label
               >
-                ${this.toastMessage}
-              </div>
-            `
-          : ""}
-        <h2 class="text-xl font-bold mb-4 text-[#000000]">My Groups</h2>
-        <button
-          @click=${() => this.store.navigate("dashboard")}
-          class="text-[#4f4f4f] underline mb-2 block text-sm"
-        >
-          &larr; Dashboard
-        </button>
-        <div class="bg-white shadow p-4 rounded border mb-4">
-          <h3 class="font-semibold text-[#000000] mb-2">Create Group</h3>
-          <div class="flex gap-2 mb-2">
-            <input
-              class="border p-2 flex-1 rounded text-[#4f4f4f]"
-              .value=${this.newGroupName}
-              @input=${(e: any) => (this.newGroupName = e.target.value)}
-              placeholder="Group name"
-            />
-            <select
-              class="border p-2 rounded text-[#4f4f4f] bg-white w-24"
-              .value=${this.newGroupCurrency}
-              @change=${(e: any) => (this.newGroupCurrency = e.target.value)}
-            >
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="INR">INR</option>
-              <option value="GBP">GBP</option>
-            </select>
-            <button
-              @click=${this.createGroup}
-              class="px-4 py-2 rounded text-white font-semibold whitespace-nowrap"
-              style="background-color: #62d84e"
-            >
-              Create
-            </button>
-          </div>
-          <input
-            class="border p-2 w-full rounded text-[#4f4f4f] text-sm"
-            .value=${this.newGroupDesc}
-            @input=${(e: any) => (this.newGroupDesc = e.target.value)}
-            placeholder="Description (optional)"
-          />
-        </div>
-        <div class="space-y-2">
-          ${this.store.state.groups.map(
-            (g) => html`
-              <div class="bg-white shadow p-4 rounded border flex justify-between items-center">
-                <div>
-                  <h3 class="font-bold text-[#000000]">${g.name}</h3>
-                  <p class="text-sm text-[#4f4f4f]">${g.description ?? ""}${g.base_currency ? html` <span class="text-xs">(${g.base_currency})</span>` : ""}</p>
-                </div>
-                <button
-                  @click=${() => this.store.navigate("group-detail", g.sys_id)}
-                  class="px-3 py-1 rounded text-white text-sm font-semibold"
-                  style="background-color: #62d84e"
+              <input
+                id="grp-name"
+                class="input"
+                .value=${this.newGroupName}
+                @input=${(e: any) => (this.newGroupName = e.target.value)}
+                placeholder="e.g. Apartment 4B"
+                ?disabled=${this.creating}
+              />
+            </div>
+            <div>
+              <label
+                for="grp-desc"
+                class="block text-xs font-medium text-ink-700 mb-1"
+                >Description <span class="text-ink-400">(optional)</span></label
+              >
+              <input
+                id="grp-desc"
+                class="input"
+                .value=${this.newGroupDesc}
+                @input=${(e: any) => (this.newGroupDesc = e.target.value)}
+                placeholder="What is this group for?"
+                ?disabled=${this.creating}
+              />
+            </div>
+            <div class="flex items-end gap-3">
+              <div class="flex-1">
+                <label
+                  for="grp-currency"
+                  class="block text-xs font-medium text-ink-700 mb-1"
+                  >Currency</label
                 >
-                  Open
-                </button>
+                <select
+                  id="grp-currency"
+                  class="select"
+                  .value=${this.newGroupCurrency}
+                  @change=${(e: any) => (this.newGroupCurrency = e.target.value)}
+                  ?disabled=${this.creating}
+                >
+                  <option value="USD">USD — US Dollar</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="INR">INR — Indian Rupee</option>
+                  <option value="GBP">GBP — British Pound</option>
+                </select>
               </div>
-            `,
-          )}
-        </div>
+              <button
+                class="btn btn-primary"
+                @click=${this._create}
+                ?disabled=${this.creating || !this.newGroupName.trim()}
+              >
+                ${icon.plus({ size: 14 })}
+                <span>Create group</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <section-header
+            eyebrow="Groups"
+            title="Your groups"
+            subtitle=${groups.length === 0
+              ? ""
+              : "Tap a group to view members, balances, and expenses."}
+          >
+            <span slot="action"></span>
+          </section-header>
+
+          ${groups.length === 0
+            ? html`
+                <empty-state
+                  title="No groups yet"
+                  body="Use the form above to create your first group. You can add members once it's set up."
+                ></empty-state>
+              `
+            : html`
+                <ul class="card divide-y divide-ink-200">
+                  ${groups.map(
+                    (g) => html`
+                      <li>
+                        <button
+                          class="w-full flex items-center gap-3 px-4 py-3
+                                 text-left transition-colors
+                                 hover:bg-ink-50 focus-visible:outline-none
+                                 focus-visible:bg-ink-50
+                                 focus-visible:ring-2
+                                 focus-visible:ring-brand-500
+                                 focus-visible:ring-inset"
+                          @click=${() =>
+                            this.store.navigate("group-detail", g.sys_id)}
+                        >
+                          <sn-avatar
+                            .name=${g.name}
+                            size="md"
+                          ></sn-avatar>
+                          <div class="min-w-0 flex-1">
+                            <p
+                              class="text-sm font-medium text-ink-900 truncate"
+                            >
+                              ${g.name}
+                            </p>
+                            <p
+                              class="text-xs text-ink-500 truncate flex items-center gap-1"
+                            >
+                              ${g.description
+                                ? html`<span>${g.description}</span>
+                                    <span class="text-ink-300">·</span>`
+                                : ""}
+                              <span>${g.base_currency}</span>
+                            </p>
+                          </div>
+                          <span class="text-ink-400">
+                            ${icon.chevronRight({ size: 16 })}
+                          </span>
+                        </button>
+                      </li>
+                    `,
+                  )}
+                </ul>
+              `}
+        </section>
       </div>
     `;
-  }
-
-  private async createGroup() {
-    if (!this.newGroupName.trim()) return;
-    try {
-      await this.store.createGroup(this.newGroupName.trim(), this.newGroupDesc.trim(), this.newGroupCurrency);
-      this.newGroupName = "";
-      this.newGroupDesc = "";
-    } catch (e: any) {
-      const msg = e.message?.includes("409") || e.message?.includes("already exists")
-        ? "A group with this name already exists."
-        : "Failed to create group.";
-      this._showToast(msg, "error");
-    }
   }
 }

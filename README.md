@@ -79,14 +79,6 @@ split-app/
 │   ├── vite.config.ts               # BUILD_MODE conditional + strip-css-at-property plugin
 │   └── package.json                 # Added build:split script
 │
-├── seismic-wrapper/                  # NEW — Now Experience (Seismic) component wrapper
-│   ├── src/
-│   │   └── x-snc-split-app-host/
-│   │       ├── index.js             # Seismic component: mounts <split-app> Lit element
-│   │       └── styles.scss          # Minimal host styles (full-width container)
-│   ├── now-ui.json                  # Component registration for UI Builder
-│   └── package.json                 # @servicenow/ui-core, ui-renderer-snabbdom
-│
 ├── scripts/
 │   ├── setup-scope.js               # Detect company code, rename scope prefix across all files
 │   ├── deploy.js                    # Deploy/update script includes and API (Method 1)
@@ -131,14 +123,11 @@ split-app/
 │   │   │   ├── index.now.ts         # Entry point (imports all definitions)
 │   │   │   ├── declarations.d.ts       # *.html module declaration
 │   │   │   ├── ui-pages/
-│   │   │   │   └── split_app.now.ts     # UiPage fluent def (imports client/index.html)
+│   │   │   │   ├── split_app.now.ts     # UiPage fluent def (imports client/index.html)
+│   │   │   │   └── split_app.module.now.ts  # sys_app_module — navigator entry for the UiPage
 │   │   │   ├── tables/              # Fluent table definitions (5 tables)
 │   │   │   ├── script-includes/     # Fluent ScriptInclude wrappers (5 script includes)
 │   │   │   ├── rest-apis/           # Fluent REST API route definitions
-│   │   │   ├── workspace/           # NEW — Seismic workspace definitions
-│   │   │   │   ├── app-config.now.ts    # Workspace shell (sys_ux_app_config)
-│   │   │   │   ├── macroponent.now.ts   # Macroponent + asset dependency
-│   │   │   │   └── page.now.ts          # Page registry (landing page)
 │   │   │   ├── generated/           # Auto-generated sys_id mappings
 │   │   │   └── tsconfig.json        # Fluent tsconfig
 │   │   └── server/
@@ -441,7 +430,7 @@ npx now-sdk install     # push to instance
 
 2. **`now-sdk build`** — The SDK compiles fluent definitions. The UiPage (`ui-pages/split_app.now.ts`) imports the HTML shell via `import page from "../../client/index.html"`. The SDK build system detects the `<script src>` reference, creates a `sys_ui_script` record from `split_app_main.jsx`, and wires the UiPage to reference it. The JS bundle is served as a static file (`split_app_main.jsdbx`) — it bypasses ServiceNow's Jelly XML parser, avoiding the blank-page issue caused by `<` operators in inline JS.
 
-3. **`now-sdk install`** — Pushes all records (`sys_ui_page`, `sys_ui_script`, tables, script includes, REST API, workspace config) to the target instance.
+3. **`now-sdk install`** — Pushes all records (`sys_ui_page`, `sys_ui_script`, tables, script includes, REST API, `sys_app_module`) to the target instance.
 
 #### `sn-sdk/package.json` scripts
 
@@ -474,131 +463,7 @@ Instance targeting is handled entirely through env vars or OS keychain — not i
 
 ---
 
-### Method 3: Deploy Seismic workspace wrapper (Now Experience)
-
-Deploys the Now Experience component that wraps the Lit app inside a workspace shell. This provides an alternate access path at `/now/workspace/split-app` alongside the existing UI Page at `/x_snc_split_split_app.do`.
-
-**Prerequisites:**
-
-- Method 2 must be deployed first (the Seismic wrapper depends on the `sys_ux_lib_asset` created by the UiPage build)
-- `@servicenow/cli` (now-cli) installed globally or via npx
-
-#### Step 1: Install seismic-wrapper dependencies
-
-```bash
-cd seismic-wrapper && npm install
-```
-
-#### Step 2: Build and deploy
-
-**To local GLL:**
-
-```bash
-cd seismic-wrapper
-SN_INSTANCE=http://localhost:8080 \
-SN_USERNAME=admin \
-SN_PASSWORD=admin \
-npx now-cli deploy
-```
-
-**To PDI:**
-
-```bash
-cd seismic-wrapper
-SN_INSTANCE=https://dev123456.service-now.com \
-SN_USERNAME=admin \
-SN_PASSWORD='your-password' \
-npx now-cli deploy
-```
-
-#### What gets deployed
-
-| Record Type | Name | Purpose |
-|---|---|---|
-| `sys_ux_macroponent` | Split App Host | Macroponent wrapping the Seismic component |
-| `sys_ux_macroponent_req_dep` | — | Links macroponent → Lit bundle asset |
-| `sys_ux_app_config` | SplitApp | Workspace shell at `/now/workspace/split-app` |
-| `sys_ux_page_registry` | Home | Landing page rendering the macroponent |
-| Component code | `x-snc-split-app-host` | The Seismic element that mounts `<split-app>` |
-
-#### Access paths after deployment
-
-| Path | Method | Description |
-|------|--------|-------------|
-| `/x_snc_split_split_app.do` | Method 2 (UI Page) | Standalone page, no workspace chrome |
-| `/now/workspace/split-app` | Method 3 (Workspace) | Full workspace shell with navigation |
-
-Both load the same `split_app_main.jsdbx` bundle — the Lit app is identical, only the surrounding shell differs.
-
-#### What gets created
-
-The SDK build generates XML metadata under `sn-sdk/dist/app/`:
-
-- **`sys_app`** — The scoped application record
-- **`sys_scope`** — The application scope
-- **`sys_db_object`** — 5 custom tables
-- **`sys_dictionary`** — All fields
-- **`sys_choice`** — Choice records for dropdowns
-- **`sys_script_include`** — Business logic (SplitUtils, BalanceCalculator, ExpenseManager, SettlementProcessor)
-- **`sys_ws_definition`** — `split_api` REST API
-- **`sys_ws_operation`** — All 14 REST endpoints
-- **`sys_ui_page`** — The frontend HTML shell (references the external script)
-- **`sys_ui_script`** — The Lit application JS bundle (served as a static file, bypasses Jelly)
-
-#### Step 5: Develop the frontend locally
-
-Use the Vite dev server for rapid frontend development (no install needed):
-
-```bash
-cd frontend
-VITE_SN_INSTANCE=https://dev123456.service-now.com npm run dev
-```
-
-Open `http://localhost:5173` in your browser. Log in to your PDI in another tab first so the session cookie is available.
-
-#### Step 6: Verify the full app
-
-1. Open the app (dev server at `http://localhost:5173` or UI Page at `/x_{scope}_split_app.do`)
-2. Create a group
-3. Add other users (find their sys_ids in **User Administration → Users**)
-4. Add an expense with an equal split
-5. Check the balances
-6. Record a settlement
-7. Verify the dashboard shows correct totals
-
-#### Re-deploying after code changes
-
-**Backend-only changes** (fluent `.now.ts` or `.server.js` files):
-
-```bash
-cd sn-sdk && npx now-sdk build && npx now-sdk install
-```
-
-**Frontend-only changes** (Lit components in `frontend/src/`):
-
-```bash
-cd sn-sdk && npm run build:frontend && npx now-sdk build && npx now-sdk install
-```
-
-**Both frontend and backend changes:**
-
-```bash
-cd sn-sdk && npm run deploy:all
-```
-
-> **Switching to a different PDI:** Re-run `setup-scope.js` with your new instance URL — the script will detect the new company code and rename the scope prefix. Then rebuild and install: `npm run deploy:all`.
-
-#### SDK troubleshooting
-
-| Error | Most likely cause | Check / Fix |
-|-------|-------------------|-------------|
-| `Unable to install application as application was null` | Stale `scopeId` | Generate a fresh GUID (re-run `setup-scope.js`) |
-| Same error after fresh scopeId | ServiceNow IDE plugin missing or outdated | Verify `sn_glider` v4.1.1+ is installed on the instance |
-| Same error with IDE plugin installed | Scope prefix doesn't match company code | Check `glide.appcreator.company.code` — re-run `setup-scope.js` matching this value |
-| Same error after all checks | Instance release incompatible with SDK v4.x, or `sn_appclient` not active | Verify release ≥ Australia and `com.glide.appclient` is active |
-| **If all above fails** | PDI does not support the fluent install processor | Use [Method 1](#deployment-method-1--deploy-using-the-servicenow-background-scripts-ui) |
-
-#### Lessons Learned: Deploying Lit on ServiceNow Australia (@servicenow/sdk 4.7.0)
+## Lessons Learned: Deploying Lit on ServiceNow Australia (@servicenow/sdk 4.7.0)
 
 This section captures every ServiceNow-specific quirk, workaround, and convention discovered while deploying this Lit app. Each entry below documents a real bug or blocker encountered in production, its root cause, and the permanent fix applied. Both human developers and LLM agents should consult this table before making changes to the deployment pipeline or frontend architecture.
 
@@ -621,6 +486,16 @@ This section captures every ServiceNow-specific quirk, workaround, and conventio
 | 15 | **Auth / Session** | All API calls return 401 even with correct `X-UserToken` logic | The UiPage HTML shell was missing `<sdk:now-ux-globals>`. Without it, `window.g_ck` is never populated, so no CSRF token is ever sent. | Add `<sdk:now-ux-globals>` to the `<head>` of the HTML shell template in `build-frontend.cjs`. Jelly processes this tag server-side and injects the `g_ck` value. | `sn-sdk/scripts/build-frontend.cjs` |
 | 16 | **CSS / Layout** | Content stays left-aligned despite `mx-auto` class on `<main>` | Tailwind's `mx-auto` generates `margin-left: auto; margin-right: auto` inside `@layer utilities`, which has lower cascade priority than unlayered styles inside Shadow DOM. The prepended `:host{display:block;width:100%}` rule (unlayered) inadvertently wins the cascade over the layered utility, nullifying the centering. | Drop `mx-auto` from the class; use inline `style="margin: 0 auto"` on the `<main>` element. Inline styles always beat layered or unlayered stylesheets, guaranteeing centering regardless of CSS layer resolution. | `frontend/src/split-app.ts` |
 | 17 | **Deployment** | Source code changes to `frontend/src/` don't appear in the deployed app | The deploy pipeline has 3 stages: (1) `build-frontend.cjs` compiles TypeScript → `sn-sdk/src/client/split_app_main.jsx`, (2) `now-sdk build` bundles `.jsx` → `.jsdbx` in `dist/static/`, (3) `now-sdk install` uploads to the instance. Running only stages 2+3 pushes the stale `.jsx` — the source changes were never compiled. | Always use `npm run deploy:all` which runs all 3 stages. After each deploy, verify the fix is present: `rg 'fix-pattern' sn-sdk/dist/static/split_app_main.jsdbx`. The `dist/static/` files are the ground truth of what was actually deployed. | `package.json` (`deploy:all` script) |
+
+### SDK troubleshooting
+
+| Error | Most likely cause | Check / Fix |
+|-------|-------------------|-------------|
+| `Unable to install application as application was null` | Stale `scopeId` | Generate a fresh GUID (re-run `setup-scope.js`) |
+| Same error after fresh scopeId | ServiceNow IDE plugin missing or outdated | Verify `sn_glider` v4.1.1+ is installed on the instance |
+| Same error with IDE plugin installed | Scope prefix doesn't match company code | Check `glide.appcreator.company.code` — re-run `setup-scope.js` matching this value |
+| Same error after all checks | Instance release incompatible with SDK v4.x, or `sn_appclient` not active | Verify release ≥ Australia and `com.glide.appclient` is active |
+| **If all above fails** | PDI does not support the fluent install processor | Use [Method 1](#deployment-method-1--deploy-using-the-servicenow-background-scripts-ui) |
 
 ## Running Locally (Development)
 
@@ -710,6 +585,187 @@ curl -s $AUTH "$SN$API_BASE/groups/$GROUP_ID/balances"
 # (if called by someone not in the group)
 # → 403 Forbidden
 ```
+
+## Deploying to a Local GLL Instance
+
+[GLL (Glide Local Lab)](https://developer.servicenow.com/dev.do#!/guides/yokohama/now-platform-application-development/installation-essentials/install-a-personal-developer-instance) is a Docker-packaged local ServiceNow instance. Use it instead of a PDI for fast iteration — no network round-trips, no "PDI sleeps after 10 min" friction, and a fully disposable database. The SplitApp deploys identically to a PDI; the differences are: URL is `http://localhost:8080`, default credentials are `admin`/`admin`, the SDK's required plugins (`sn_glider`, `sn_appclient`) come pre-installed, and `glide.appcreator.company.code` is empty by default (so the scope is just `x_split`).
+
+### Prerequisites
+
+- **Docker** 20.10+ (Docker Desktop on macOS/Windows, `docker-ce` on Linux)
+- 4 GB RAM free, 10 GB disk free
+- Port `8080` available (and `8443` if you want HTTPS)
+
+### Step 1: Pull and start GLL
+
+```bash
+docker pull servicenowglide/local:latest
+
+docker run -d \
+  --name gll \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -v gll-data:/opt/glide/data \
+  servicenowglide/local:latest
+```
+
+First boot takes 3–5 minutes (the image initializes an empty database). Watch the boot progress:
+
+```bash
+docker logs -f gll
+```
+
+Wait for a line like `Server started` or `glide is ready to accept requests` before continuing.
+
+### Step 2: Verify GLL is ready
+
+```bash
+curl -s --user admin:admin \
+  "http://localhost:8080/api/now/table/sys_properties?sysparm_query=name=glide.product.version&sysparm_fields=value"
+```
+
+Expected:
+
+```json
+{"result":[{"value":"Australia"}]}
+```
+
+(Or `Zurich`, etc.) If you get `Connection refused`, GLL is still booting — wait and retry. You can also confirm by logging in via the browser at `http://localhost:8080` (admin/admin).
+
+### Step 3: Verify required plugins
+
+GLL ships with `sn_glider` and `sn_appclient` pre-installed. Confirm:
+
+```bash
+curl -s --user admin:admin \
+  "http://localhost:8080/api/now/table/sys_plugins?sysparm_query=name=com.glide.appclient&sysparm_fields=name,active,version"
+```
+
+Should return `active: true`. On a fresh PDI you'd have to install these from the Store; on GLL, you can skip that step entirely.
+
+### Step 4: Detect the company code
+
+```bash
+curl -s --user admin:admin \
+  "http://localhost:8080/api/now/table/sys_properties?sysparm_query=name=glide.appcreator.company.code&sysparm_fields=value"
+```
+
+**GLL almost always returns an empty value.** This means your scope prefix should be just `x_split` — no `x_{code}_` prefix needed. The `setup-scope.js` script handles this automatically.
+
+### Step 5: Run the scope setup
+
+```bash
+node scripts/setup-scope.js http://localhost:8080 admin admin
+```
+
+Expected output:
+
+```
+Company code: (empty — no prefix restriction)
+No change needed (scope already matches company code or code is empty).
+```
+
+If you see `Renaming scope: x_..._split → x_split`, that's also fine — it means the script detected a non-GLL scope in `now.config.json` and is correcting it for GLL.
+
+### Step 6: Deploy the SplitApp
+
+```bash
+cd sn-sdk
+npm run deploy:local
+```
+
+This single command runs the full pipeline:
+
+1. `build:frontend` — Vite builds the Lit app → `src/client/split_app_main.jsx` + `index.html`
+2. `now-sdk build` — compiles the fluent TypeScript → `dist/app/`
+3. `now-sdk install` — pushes every record to `http://localhost:8080` (env vars `SN_SDK_INSTANCE_URL=http://localhost:8080`, `SN_SDK_USER=admin`, `SN_SDK_USER_PWD=admin` are set internally by the script)
+
+Watch for `Installation complete` or `app installed successfully` in the output.
+
+### Step 7: Access the deployed app
+
+Open in your browser:
+
+```
+http://localhost:8080/x_snc_split_split_app.do
+```
+
+(If `setup-scope.js` renamed your scope, the URL will be `http://localhost:8080/x_{scope}_split_app.do` instead — check the terminal output from Step 5 to confirm the actual scope.)
+
+You should also see a **SplitApp** link in the navigator under **System Applications → All Available Applications → Split App**.
+
+### Step 8: Verify the REST API
+
+```bash
+API_BASE=$(curl -s --user admin:admin \
+  "http://localhost:8080/api/now/table/sys_ws_definition?sysparm_query=name=split_api&sysparm_fields=base_uri" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['base_uri'])")
+
+curl -s --user admin:admin "http://localhost:8080$API_BASE/user/dashboard"
+```
+
+Expected:
+
+```json
+{"user_id":"...","groups":[],"totals":{"you_are_owed":"0.00","you_owe":"0.00"}}
+```
+
+### Iteration loop
+
+**Frontend-only changes** (Lit components in `frontend/src/`):
+
+```bash
+# Terminal 1 — GLL stays running in Docker
+# Terminal 2 — Vite dev server with HMR, proxying API calls to GLL
+cd frontend
+VITE_SN_INSTANCE=http://localhost:8080 npm run dev
+# Open http://localhost:5173
+```
+
+The Vite dev server handles frontend hot-reload locally; the browser's session cookie authenticates against GLL. No rebuild needed for Lit component changes.
+
+**Backend-only changes** (fluent `.now.ts` or `.server.js`):
+
+```bash
+cd sn-sdk
+npx now-sdk build && npx now-sdk install
+```
+
+**Both frontend and backend changes**:
+
+```bash
+cd sn-sdk
+npm run deploy:all
+```
+
+The full pipeline takes ~15 seconds. Refresh the browser at `/x_{scope}_split_app.do` afterward.
+
+### Resetting GLL (fresh database)
+
+To wipe all data and start over (useful when you want to test bootstrap from scratch, or after schema changes):
+
+```bash
+docker stop gll
+docker rm gll
+docker volume rm gll-data
+docker run -d --name gll -p 8080:8080 -v gll-data:/opt/glide/data servicenowglide/local:latest
+```
+
+First boot of a fresh volume takes 3–5 minutes. After reset, re-run `setup-scope.js` and `deploy:local`.
+
+### GLL troubleshooting
+
+| Issue | Solution |
+|---|---|
+| `Connection refused` on port 8080 | GLL still booting. Watch `docker logs -f gll` — first boot takes 3–5 min |
+| `Authentication failed` | GLL default creds are `admin`/`admin`. PDIs use the credentials you set when requesting them |
+| Port 8080 already in use | Run with `-p 9090:8080` and use `http://localhost:9090` everywhere (`docker run`, `setup-scope.js`, env vars, browser URL) |
+| `Unable to install application as application was null` | Rare on GLL (plugins are pre-installed). If it happens, regenerate `scopeId` in `sn-sdk/now.config.json` (any new GUID works) and re-run `deploy:local` |
+| GLL out of disk | `docker volume rm gll-data` and restart. Wipes the DB but not the image |
+| `docker pull` is slow or fails | Check your network. The image is ~3 GB |
+| Slow Vite dev server with GLL | Normal — Vite proxies every `/api/*` call to GLL on every request. For HMR-heavy work, use the Vite dev server; for end-to-end testing, use the deployed `/x_{scope}_split_app.do` URL instead |
+| GLL is "stuck" mid-deploy | `docker restart gll` then re-run `deploy:local`. The SDK install is idempotent |
+| Want to inspect the GLL filesystem | `docker exec -it gll bash` then look in `/opt/glide/` |
 
 ## Acceptance Criteria Walkthrough
 

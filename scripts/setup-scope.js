@@ -76,7 +76,6 @@ async function main() {
     path.join(ROOT, "sn-sdk", "src"),
     path.join(ROOT, "sn"),
     path.join(ROOT, "frontend", "src"),
-    path.join(ROOT, "seismic-wrapper", "src"),
   ];
 
   for (const dir of dirs) {
@@ -87,8 +86,6 @@ async function main() {
   const individualFiles = [
     path.join(ROOT, "sn-sdk", "now.config.json"),
     path.join(ROOT, "frontend", "vite.config.ts"),
-    path.join(ROOT, "seismic-wrapper", "now-ui.json"),
-    path.join(ROOT, "seismic-wrapper", "package.json"),
   ];
 
   for (const filePath of individualFiles) {

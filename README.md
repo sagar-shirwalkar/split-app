@@ -2,6 +2,28 @@
 
 A split-expense tracking application (inspired by Splitwise) built for ServiceNow. Groups of users can track shared expenses, split costs across members using multiple strategies, and record settlements to clear balances.
 
+## Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Deploying to a ServiceNow PDI](#deploying-to-a-servicenow-pdi)
+
+  - [PDI Deployment Method 1: Background Scripts - Not Recommended](#deployment-method-1-not-recommended-fallback-only--deploy-using-the-servicenow-background-scripts-ui)
+  - [PDI Deployment Method 2: @servicenow/sdk 4.7.0](#method-2-deploy-using-servicenowsdk-470-now-sdk)
+  - [PDI Deployment Method 2: Lessons Learned](#lessons-learned-deploying-lit-on-servicenow-australia-servicenowsdk-470)
+
+- [Running UI Locally (UI Development)](#running-locally-development)
+- [Deploying to a Local GLL Instance (Full Stack Development)](#deploying-to-a-local-gll-instance)
+- [Deploying the Seismic Workspace](#deploying-the-seismic-workspace)
+
+  - [Architecture: Transplant Host](#architecture-transplant-host)
+  - [Approaches considered](#approaches-considered)
+
+- [Acceptance Criteria Walkthrough](#acceptance-criteria-walkthrough)
+- [Troubleshooting](#troubleshooting)
+- [Data Model](#data-model)
+
 ## Features
 
 ### Group Management
@@ -45,7 +67,7 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 | **Frontend** | [Lit](https://lit.dev) `^3.3.3` (`frontend/`) — reactive web components |
 | **Styling** | [Tailwind CSS](https://tailwindcss.com) `^4.3.0` (`frontend/`) — utility-first CSS |
 | **Bundler** | [Vite](https://vitejs.dev) `^8.0.13` (`frontend/`) — dev server & production builds |
-| **Now Experience shell** | [Seismic](https://docs.servicenow.com/csh?topicname=seismic-overview.html) custom element `x-snc-split-app-host` (`seismic-wrapper/`) — Pattern B host that loads the Lit bundle at runtime |
+| **Now Experience shell** | [Seismic](https://docs.servicenow.com/csh?topicname=seismic-overview.html) custom element `x-snc-split-app-host` (`seismic-wrapper/`) — Transplant Host that loads the Lit bundle at runtime |
 | **Seismic build** | `@servicenow/cli@^24.0.1` + `@servicenow/ui-core@^24.1.1` + `@servicenow/ui-renderer-snabbdom@^24.1.1` (`seismic-wrapper/`) — `snc ui-component build && snc ui-component deploy` |
 | **Backend** | ServiceNow scoped application (scope `x_{company_code}_split`) |
 | **Data** | Custom ServiceNow tables — `x_{scope}_group`, `x_{scope}_membership`, `x_{scope}_expense`, `x_{scope}_share`, `x_{scope}_settlement` |
@@ -129,7 +151,7 @@ split-app/
 │   │   │   ├── ui-pages/
 │   │   │   │   ├── split_app.now.ts     # UiPage fluent def (imports client/index.html)
 │   │   │   │   └── split_app.module.now.ts  # sys_app_module — navigator entry for the UiPage
-│   │   │   ├── workspace/           # NEW — Now Experience workspace wrapper (Pattern B)
+│   │   │   ├── workspace/           # NEW — Now Experience workspace wrapper (Transplant Host)
 │   │   │   │   ├── app-config.now.ts    # sys_ux_app_config (workspace root)
 │   │   │   │   ├── app-route.now.ts     # sys_ux_app_route (URL → screen)
 │   │   │   │   ├── screen.now.ts        # sys_ux_screen (single Home screen)
@@ -146,13 +168,13 @@ split-app/
 │   ├── target/                      # Build artifact (.zip)
 │   └── dist/                        # SDK build output
 │
-├── seismic-wrapper/                  # NEW — Seismic custom-element wrapper (Pattern B host)
+├── seismic-wrapper/                  # NEW — Seismic custom-element wrapper (Transplant Host)
 │   ├── now-ui.json                  # Component descriptor: tag, label, icon, scope
 │   ├── package.json                 # @servicenow/ui-core 24.1.1, @servicenow/cli 24.0.1
 │   ├── tsconfig.json
 │   └── src/
 │       └── x-snc-split-app-host/
-│           ├── index.tsx            # Pattern B host: mounts <split-app> at runtime
+│           ├── index.tsx            # Transplant Host: mounts <split-app> at runtime
 │           └── styles.scss
 │
 ├── deploy.js                        # Method 1 deploy script
@@ -507,7 +529,7 @@ This section captures every ServiceNow-specific quirk, workaround, and conventio
 | 15 | **Auth / Session** | All API calls return 401 even with correct `X-UserToken` logic | The UiPage HTML shell was missing `<sdk:now-ux-globals>`. Without it, `window.g_ck` is never populated, so no CSRF token is ever sent. | Add `<sdk:now-ux-globals>` to the `<head>` of the HTML shell template in `build-frontend.cjs`. Jelly processes this tag server-side and injects the `g_ck` value. | `sn-sdk/scripts/build-frontend.cjs` |
 | 16 | **CSS / Layout** | Content stays left-aligned despite `mx-auto` class on `<main>` | Tailwind's `mx-auto` generates `margin-left: auto; margin-right: auto` inside `@layer utilities`, which has lower cascade priority than unlayered styles inside Shadow DOM. The prepended `:host{display:block;width:100%}` rule (unlayered) inadvertently wins the cascade over the layered utility, nullifying the centering. | Drop `mx-auto` from the class; use inline `style="margin: 0 auto"` on the `<main>` element. Inline styles always beat layered or unlayered stylesheets, guaranteeing centering regardless of CSS layer resolution. | `frontend/src/split-app.ts` |
 | 17 | **Deployment** | Source code changes to `frontend/src/` don't appear in the deployed app | The deploy pipeline has 3 stages: (1) `build-frontend.cjs` compiles TypeScript → `sn-sdk/src/client/split_app_main.jsx`, (2) `now-sdk build` bundles `.jsx` → `.jsdbx` in `dist/static/`, (3) `now-sdk install` uploads to the instance. Running only stages 2+3 pushes the stale `.jsx` — the source changes were never compiled. | Always use `npm run deploy:all` which runs all 3 stages. After each deploy, verify the fix is present: `rg 'fix-pattern' sn-sdk/dist/static/split_app_main.jsdbx`. The `dist/static/` files are the ground truth of what was actually deployed. | `package.json` (`deploy:all` script) |
-| 18 | **Seismic / Pattern B** | Need to ship a Lit web component inside a Seismic workspace without a full React-style Seismic UI | Lit uses Shadow DOM and `customElements` registration at module-load time. Seismic components are custom elements too, but the Seismic framework expects to own the render tree. Mounting a Lit element as a child of a Seismic host is the only safe composition. | Pattern B: a Seismic host (`x-snc-split-app-host`) renders an empty mount div and, in `view()`, dynamically loads the Lit bundle from `/api/now/ux/asset/{scope}/split_app_main`, then `document.createElement("split-app")` synchronously creates the Lit subtree. The Seismic framework owns the host; Lit owns everything below it. | `seismic-wrapper/src/x-snc-split-app-host/index.tsx` |
+| 18 | **Seismic / Transplant Host** | Need to ship a Lit web component inside a Seismic workspace without a full React-style Seismic UI | Lit uses Shadow DOM and `customElements` registration at module-load time. Seismic components are custom elements too, but the Seismic framework expects to own the render tree. Mounting a Lit element as a child of a Seismic host is the only safe composition. | **Transplant Host**: a Seismic host (`x-snc-split-app-host`) renders an empty mount div and, in `view()`, dynamically loads the Lit bundle from `/api/now/ux/asset/{scope}/split_app_main`, then `document.createElement("split-app")` synchronously creates the Lit subtree. The Seismic framework owns the host; Lit owns everything below it. | `seismic-wrapper/src/x-snc-split-app-host/index.tsx` |
 | 19 | **Seismic / Asset URL** | Host can't find the Lit bundle at runtime | `sys_ui_script` records are NOT publicly addressable at a stable URL on the platform. The platform auto-creates a `sys_ux_lib_asset` row for the script and exposes it at `/api/now/ux/asset/{scope}/{name}`. | Reference the asset URL `/api/now/ux/asset/{scope}/split_app_main` from the Seismic host. Use `<link rel="modulepreload">` at module-import time so the bundle is cached before the first render. Append `?v={hash}` for cache-busting (hash from `build-frontend.cjs`'s `.split-bundle-version`). | `seismic-wrapper/src/x-snc-split-app-host/index.tsx`, `sn-sdk/scripts/build-frontend.cjs` |
 | 20 | **Seismic / Versions** | `npm install` of `@servicenow/ui-core@^22.0.0` fails with `ETARGET No matching version` | The Seismic CLI and `ui-core`/`ui-renderer-snabbdom` are versioned in lockstep. The latest `ui-core` is 24.1.1; the matching CLI is 24.0.1. Pin all three to the same major. | Use `@servicenow/ui-core@^24.1.1`, `@servicenow/ui-renderer-snabbdom@^24.1.1`, `@servicenow/cli@^24.0.1`. The CLI handles the build and deploy of the Seismic component, including registering the `sys_ux_lib_asset` row. | `seismic-wrapper/package.json` |
 | 21 | **Seismic / Two-step deploy** | "Lit app works at `/x_split_split_app.do` but the workspace at `/now/split-app` is empty" | The Seismic Now Experience workspace and the UiPage are **two separate deployment artifacts**. The UiPage uses `sys_ui_page` + `sys_ui_script`. The workspace uses `sys_ux_app_config` + `sys_ux_screen` + `sys_ux_macroponent` + the Seismic custom element. They share the same Lit bundle (URL) but are deployed by different tools. | Run TWO deploys: (1) `now-sdk install` pushes the fluent workspace records + UiPage + sys_ui_script; (2) `snc ui-component deploy` pushes the Seismic custom element + its `sys_ux_lib_asset`. The root `npm run deploy:local` / `deploy:pdi` chain both. | `package.json` (chained deploy scripts) |
@@ -810,21 +832,23 @@ First boot of a fresh volume takes 3–5 minutes. After reset, re-run `setup-sco
 
 The Lit UI is also deployable as a [Seismic](https://developer.servicenow.com/dev.do#!/reference/next-experience/seismic) custom element inside a Now Experience workspace. The workspace is reachable at `/now/split-app` and shows the Lit UI inside the standard Seismic shell (top app bar, navigation, user menu). This is **separate from the UiPage deployment** — they share the Lit bundle but are deployed by two different tools.
 
-### Architecture: Pattern B (Seismic host + Lit subtree)
+### Architecture: Transplant Host
 
-A Seismic custom element is the standard way to ship UI on Now Experience. The SplitApp can't be expressed as a single Seismic component because the Lit runtime owns a `customElements` registry and a Shadow DOM tree — these need a stable host to mount under. The fix is **Pattern B**:
+A Seismic custom element is the standard way to ship UI on Now Experience. The SplitApp can't be expressed as a single Seismic component because the Lit runtime owns a `customElements` registry and a Shadow DOM tree — these need a stable host to mount under. The fix is the **Transplant Host** pattern: a Seismic element whose only job is to load an inner framework and mount its root.
 
-```
-Seismic workspace (sys_ux_app_config → sys_ux_screen)
-        ↓ mounts
-<x-snc-split-app-host>   ← Seismic custom element (Pattern B host)
-        │   • view() returns empty mount div
-        │   • insert() loads the Lit bundle at runtime
-        │   • createElement("split-app") synchronously mounts
-        ↓
-<split-app>              ← Lit root element (Pattern B subtree)
-        ↓ contains
-<group-list>, <group-detail>, <add-expense-form>, …
+```mermaid
+flowchart TB
+    WS["Seismic Workspace<br/>(sys_ux_app_config → sys_ux_screen)"]
+    HOST["&lt;x-snc-split-app-host&gt;<br/><b>Transplant Host</b><br/>• view() returns empty mount div<br/>• loads Lit bundle at runtime<br/>• createElement('split-app') synchronously mounts"]
+    ROOT["&lt;split-app&gt;<br/><b>Lit root element</b>"]
+    CHILD["&lt;group-list&gt;, &lt;group-detail&gt;,<br/>&lt;add-expense-form&gt;, …"]
+
+    WS -->|"mounts"| HOST
+    HOST -->|"createElement"| ROOT
+    ROOT -->|"contains"| CHILD
+
+    HOST -.->|"@property (down)"| ROOT
+    ROOT -.->|"composed CustomEvent (up)"| HOST
 ```
 
 The Seismic framework owns the host's render tree (the workspace chrome and the empty mount div). The Lit framework owns everything inside `<split-app>`. The two never reach into each other's DOM. Communication is via `CustomEvent` with `composed: true` (Lit → host) and the `@property` mechanism (host → Lit).
@@ -876,14 +900,39 @@ https://dev123456.service-now.com/now/split-app      (PDI)
 
 The SplitApp also appears in the navigator under **System Applications → All Available Applications → Split App**, and now has a second entry (the UiPage at `/x_{scope}_split_app.do` plus the workspace at `/now/split-app`).
 
-### Files added
+### Approaches considered
+
+Two orthogonal axes were evaluated independently — the **architectural pattern** (how the UI is composed at runtime) and the **deployment combo** (how the bundle is delivered to the workspace). The two chosen answers compose into the current implementation: **Transplant Host** + **Stamped Asset Endpoint**.
+
+#### Architectural patterns (UI composition)
+
+| Approach | Description | Pros | Cons | Verdict |
+|---|---|---|---|---|
+| **Sovereign Render** | Seismic component renders all UI directly in its own VDOM tree. One component, one framework, one render tree. | Single framework, no extra layer, smallest bundle | Lit's `customElements` registration collides with Seismic's renderer; Lit expects to own a Shadow DOM boundary that Seismic already claims; cross-framework tag names fight for the global registry | Not viable |
+| **Transplant Host** ★ | Seismic host is a thin shell; Lit mounts in a sub-DOM via `customElements.define`. The host owns only the empty mount div. | Clean framework boundary; one-way event bridging (Lit → host via `composed: true`); host is reusable for other inner frameworks; preserves the Lit component model as-is | Extra host layer (one extra file to ship); bundle must finish loading before mount; two deploy artifacts to coordinate | **Chosen** — see [Architecture: Transplant Host](#architecture-transplant-host) above |
+
+#### Deployment combos (bundle delivery)
+
+| Approach | Description | Pros | Cons | Verdict |
+|---|---|---|---|---|
+| **Ephemeral Page** | UiPage + `sys_ui_script` only; no Seismic workspace at all. | Simplest deploy (one tool, `now-sdk install`); no Seismic build step; no `snc` CLI needed; works on any release | No workspace chrome; no top app bar; no `/now/` URL; no native navigator entry for the workspace shape | Standalone-only — the `/x_{scope}_split_app.do` route uses this |
+| **Stamped Asset Endpoint** ★ | Workspace + `/api/now/ux/asset/{scope}/split_app_main?v={hash}`, where the hash is inlined at host-build time from `.split-bundle-version`. | Deterministic cache-busting — the hash is content-derived and changes only when the bundle changes; works cleanly with `<link rel="modulepreload">` (a static URL is required); a stale host always re-fetches | Two deploys must be coordinated (host redeploy required to pick up a new bundle version, or the hash won't change in the URL) | **Chosen** — see [Bundle sharing](#bundle-sharing) and [Building](#building) above |
+| **Soft-Versioned Path** | Workspace + the same URL but with no query string. Cache-busting relies on the platform's ETag behavior. | No env-var plumbing; no build-time hash inlining; no `.split-bundle-version` artifact | ETag-based caching is opaque — debugging "why is the user still seeing the old bundle?" is harder; depends on platform ETag behavior; the `?v=…` cache-buster cannot be used with `modulepreload` semantics for HTTP/2 push diagnostics | Less deterministic; rejected |
+| **Inset Document** | Workspace + the bundle is loaded by navigating the Seismic host to the UiPage URL (`x_snc_split_split_app.do`) inside an iframe. | Reuses the UiPage's existing chrome and `uxpcb` timestamp cache-buster; one less deploy artifact | Re-introduces [Lesson 10](#lessons-learned-deploying-lit-on-servicenow-australia-servicenowsdk-470) (Jelly parser risk) inside the workspace context; cannot isolate the bundle version from the UiPage's own `uxpcb` timestamp; iframe boundaries break `X-UserToken` propagation and `customElements` sharing | Couples the workspace to the UiPage; rejected |
+| **Cipher-Channel Load** | Workspace + a CSP nonce in the asset URL so the platform's strictest Content-Security-Policy allows it. | Maximum security — the URL is valid only for the single request that issued the nonce; defense-in-depth against exfiltration | The nonce is per-request and cannot be inlined into a `<link rel="modulepreload">` (which is fetched before the page knows the per-request nonce); not viable for static module loading | Not viable on Now Experience today |
+
+#### Why not just put Lit inside the UiPage?
+
+`Ephemeral Page` is shipped and is the route at `/x_{scope}_split_app.do`. It remains the simplest deploy and the fallback path. The Seismic workspace exists for users who want the Now Experience shell — top app bar, side navigation, user menu, native search — around the Lit UI. The two coexist; each is the right tool for its context.
+
+#### Files added for the Transplant Host + Stamped Asset Endpoint
 
 | Path | Purpose |
 |---|---|
 | `seismic-wrapper/package.json` | `@servicenow/ui-core@^24.1.1`, `@servicenow/ui-renderer-snabbdom@^24.1.1`, `@servicenow/cli@^24.0.1` |
 | `seismic-wrapper/tsconfig.json` | TypeScript config for the host |
 | `seismic-wrapper/now-ui.json` | Component descriptor (tag, label, icon, scope, applicable types) |
-| `seismic-wrapper/src/x-snc-split-app-host/index.tsx` | Pattern B host — see [Lesson 18](#lessons-learned-deploying-lit-on-servicenow-australia-servicenowsdk-470) for the design rationale |
+| `seismic-wrapper/src/x-snc-split-app-host/index.tsx` | Transplant Host — see [Lesson 18](#lessons-learned-deploying-lit-on-servicenow-australia-servicenowsdk-470) for the design rationale |
 | `seismic-wrapper/src/x-snc-split-app-host/styles.scss` | Minimal mount-div styles (sizing) |
 | `sn-sdk/src/fluent/workspace/app-config.now.ts` | `sys_ux_app_config` — the workspace root |
 | `sn-sdk/src/fluent/workspace/app-route.now.ts` | `sys_ux_app_route` — URL → screen binding |

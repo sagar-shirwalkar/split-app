@@ -13,3 +13,8 @@ import "./script-includes/setup-app.now";
 import "./rest-apis/split-api.now";
 import "./ui-pages/split_app.now";
 import "./ui-pages/split_app.module.now";
+import "./workspace/app-config.now";
+import "./workspace/screen-type.now";
+import "./workspace/macroponent.now";
+import "./workspace/screen.now";
+import "./workspace/app-route.now";

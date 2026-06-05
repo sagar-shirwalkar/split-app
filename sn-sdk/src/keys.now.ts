@@ -30,6 +30,11 @@ declare global {
       "split-api-delete-group": "split-api-delete-group";
       "split-ui-page": "split-ui-page";
       "split-app-module": "split-app-module";
+      "split-app-config": "split-app-config";
+      "split-screen-type": "split-screen-type";
+      "split-macroponent-host": "split-macroponent-host";
+      "split-screen-home": "split-screen-home";
+      "split-app-route": "split-app-route";
     }
   }
 }

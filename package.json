@@ -5,11 +5,13 @@
     "dev": "concurrently \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
-    "build:seismic": "cd seismic-wrapper && npm run build",
+    "build:lit": "node sn-sdk/scripts/build-frontend.cjs",
+    "build:seismic": "node scripts/build-seismic.cjs",
     "deploy": "node deploy.js",
-    "deploy:local": "npm run build && npm run _copy-bundle && cd sn-sdk && now-sdk deploy --profile local",
-    "deploy:pdi": "npm run build && npm run _copy-bundle && cd sn-sdk && now-sdk deploy --profile pdi",
-    "deploy:seismic:local": "npm run build:seismic && cd seismic-wrapper && now-cli deploy --profile local",
+    "deploy:local": "npm run build:lit && cd sn-sdk && now-sdk deploy --profile local && cd ../seismic-wrapper && snc ui-component deploy --profile local",
+    "deploy:pdi": "npm run build:lit && cd sn-sdk && now-sdk deploy --profile pdi && cd ../seismic-wrapper && snc ui-component deploy --profile pdi",
+    "deploy:seismic:local": "npm run build:lit && cd seismic-wrapper && SN_INSTANCE=http://localhost:8080 SN_USERNAME=admin SN_PASSWORD=admin snc ui-component build && SN_INSTANCE=http://localhost:8080 SN_USERNAME=admin SN_PASSWORD=admin snc ui-component deploy",
+    "deploy:seismic:pdi": "npm run build:lit && cd seismic-wrapper && snc ui-component build && snc ui-component deploy",
     "_copy-bundle": "node scripts/copy-bundle.js"
   },
   "devDependencies": {

@@ -6,9 +6,9 @@
         "associatedTypes": ["global.core", "global.landing-page"],
         "label": "Split App Host",
         "icon": "document-outline",
-        "description": "Hosts the Lit-based SplitApp inside Seismic"
+        "description": "Hosts the Lit-based SplitApp inside a Now Experience workspace"
       }
     }
   },
-  "scopeName": "x_split"
+  "scopeName": "x_snc_split"
 }

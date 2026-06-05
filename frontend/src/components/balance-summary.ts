@@ -1,39 +1,60 @@
 import { LitElement, html } from "lit";
 import { property, customElement } from "lit/decorators.js";
+import { formatMoney } from "../lib/format.js";
+import { icon } from "./icons.js";
+import "./avatar.js";
+import "./empty-state.js";
 
 @customElement("balance-summary")
 export class BalanceSummary extends LitElement {
   @property({ type: Array }) balances: any[] = [];
   @property({ type: Array }) members: any[] = [];
+  @property({ type: String }) currency = "USD";
+  @property({ type: String }) currentUserId = "";
 
-  private _fmt(n: number | null | undefined) {
-    return `$${(n ?? 0).toFixed(2)}`;
+  private _name(sysId: string) {
+    const m = this.members.find((m: any) => m.sys_id === sysId);
+    return m ? m.name : sysId;
   }
 
   render() {
+    if (!this.balances || this.balances.length === 0) {
+      return html`
+        <empty-state
+          title="All settled up"
+          body="Nobody owes anybody in this group right now."
+        ></empty-state>
+      `;
+    }
+
     return html`
-      <div class="bg-white shadow p-4 rounded border">
-        <h3 class="font-semibold text-[#000000] mb-2">Balances</h3>
-        ${this.balances.length === 0
-          ? html`<p class="text-[#4f4f4f]">No balances yet.</p>`
-          : ""}
+      <ul class="card divide-y divide-ink-200">
         ${this.balances.map(
           (b) => html`
-            <div class="flex justify-between border-b py-1 text-[#4f4f4f]">
-              <span
-                >${this.getUserName(b.from_user)} owes
-                ${this.getUserName(b.to_user)}</span
+            <li
+              class="flex items-center gap-3 px-4 py-3"
+            >
+              <div class="flex items-center -space-x-2 shrink-0">
+                <sn-avatar .name=${this._name(b.from_user)} size="sm"></sn-avatar>
+                <sn-avatar .name=${this._name(b.to_user)} size="sm"></sn-avatar>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm text-ink-900 truncate">
+                  <span class="font-medium">${this._name(b.from_user)}</span>
+                  <span class="text-ink-500"> owes </span>
+                  <span class="font-medium">${this._name(b.to_user)}</span>
+                </p>
+              </div>
+              <p
+                class="font-semibold text-sm num font-tabular
+                       text-ink-900"
               >
-              <span class="font-mono">${this._fmt(b.amount)}</span>
-            </div>
+                ${formatMoney(b.amount, this.currency)}
+              </p>
+            </li>
           `,
         )}
-      </div>
+      </ul>
     `;
-  }
-
-  private getUserName(sysId: string): string {
-    const member = this.members.find((m: any) => m.sys_id === sysId);
-    return member ? member.name : sysId;
   }
 }

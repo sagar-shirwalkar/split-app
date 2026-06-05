@@ -2,17 +2,23 @@
   "name": "x-snc-split-seismic",
   "version": "1.0.0",
   "private": true,
-  "dependencies": {
-    "@servicenow/cli": "^22.0.0",
-    "@servicenow/ui-core": "^22.0.0",
-    "@servicenow/ui-renderer-snabbdom": "^22.0.0"
-  },
+  "description": "Seismic web component (Pattern B) that hosts the Lit SplitApp inside a Now Experience workspace",
   "scripts": {
-    "build": "node ../../scripts/build-seismic.cjs",
-    "dev": "SEISMIC_LIT_MODE=runtime snc ui-component develop",
-    "deploy": "SEISMIC_LIT_MODE=runtime snc ui-component deploy",
-    "build:bundled": "SEISMIC_LIT_MODE=bundled node ../../scripts/build-seismic.cjs",
-    "dev:bundled": "SEISMIC_LIT_MODE=bundled snc ui-component develop",
-    "deploy:bundled": "SEISMIC_LIT_MODE=bundled snc ui-component deploy"
+    "build": "snc ui-component build",
+    "deploy": "snc ui-component deploy",
+    "build:local": "SN_INSTANCE=http://localhost:8080 SN_USERNAME=admin SN_PASSWORD=admin snc ui-component build",
+    "deploy:local": "SN_INSTANCE=http://localhost:8080 SN_USERNAME=admin SN_PASSWORD=admin snc ui-component deploy",
+    "deploy:pdi": "snc ui-component deploy",
+    "dev": "snc ui-component develop",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@servicenow/ui-core": "^24.1.1",
+    "@servicenow/ui-renderer-snabbdom": "^24.1.1"
+  },
+  "devDependencies": {
+    "@servicenow/cli": "^24.0.1",
+    "@types/node": "^25.9.1",
+    "typescript": "^5.4.0"
   }
 }

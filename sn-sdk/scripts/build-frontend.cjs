@@ -70,8 +70,23 @@ function main() {
   const htmlOut = path.join(CLIENT_DIR, "index.html");
   fs.writeFileSync(htmlOut, shellHtml);
 
+  // Compute a content hash for cache-busting the asset URL in the
+  // Seismic host. The hash is derived from the emitted JS, written
+  // to a version file at the project root, and printed so the
+  // wrapper build can inline it via SN_SPLIT_VERSION.
+  const crypto = require("crypto");
+  const hash = crypto
+    .createHash("sha256")
+    .update(js)
+    .digest("hex")
+    .slice(0, 12);
+  const version = `v${Date.now()}-${hash}`;
+  const versionOut = path.join(ROOT, ".split-bundle-version");
+  fs.writeFileSync(versionOut, version);
+
   console.log(`Generated: ${jsPath}`);
   console.log(`Generated: ${htmlOut}`);
+  console.log(`Bundle version: ${version}`);
 }
 
 main();

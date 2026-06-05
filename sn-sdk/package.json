@@ -7,7 +7,9 @@
     "deploy": "now-sdk build && now-sdk install",
     "build:frontend": "node scripts/build-frontend.cjs",
     "build:all": "node scripts/build-frontend.cjs && now-sdk build",
-    "deploy:all": "node scripts/build-frontend.cjs && now-sdk build && now-sdk install"
+    "deploy:all": "node scripts/build-frontend.cjs && now-sdk build && now-sdk install",
+    "deploy:local": "SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL SN_SDK_INSTANCE_URL=http://localhost:8080 SN_SDK_USER=admin SN_SDK_USER_PWD=admin npm run deploy:all",
+    "deploy:pdi": "npm run deploy:all"
   },
   "dependencies": {
     "@servicenow/sdk": "^4.7.0"

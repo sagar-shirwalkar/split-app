@@ -29,6 +29,10 @@ declare global {
       "split-api-get-dashboard": "split-api-get-dashboard";
       "split-api-delete-group": "split-api-delete-group";
       "split-ui-page": "split-ui-page";
+      "split-app-workspace": "split-app-workspace";
+      "split-app-macroponent": "split-app-macroponent";
+      "split-app-macroponent-dep": "split-app-macroponent-dep";
+      "split-app-workspace-page": "split-app-workspace-page";
     }
   }
 }

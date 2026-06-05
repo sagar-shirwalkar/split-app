@@ -2,24 +2,5 @@
   "scope": "x_snc_split",
   "scopeId": "6789306cf3ff41b5969db7ab6ce63322",
   "name": "Split App",
-  "tsconfigPath": "./src/server/tsconfig.json",
-  "profiles": {
-    "local": {
-      "instanceUrl": "${SN_LOCAL_URL:-http://localhost:8080}",
-      "auth": {
-        "type": "basic",
-        "username": "${SN_LOCAL_USER:-admin}",
-        "password": "${SN_LOCAL_PASS:-admin}"
-      }
-    },
-    "pdi": {
-      "instanceUrl": "${SN_PDI_URL}",
-      "auth": {
-        "type": "basic",
-        "username": "${SN_PDI_USER}",
-        "password": "${SN_PDI_PASS}"
-      }
-    }
-  },
-  "defaultProfile": "local"
+  "tsconfigPath": "./src/server/tsconfig.json"
 }

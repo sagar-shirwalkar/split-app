@@ -35,15 +35,12 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api/x_snc_split": {
+      "/api/x_split": {
         target: INSTANCE,
         changeOrigin: true,
         rewrite: INSTANCE_ID
           ? (path) =>
-              path.replace(
-                "/api/x_snc_split",
-                `/api/${INSTANCE_ID}/x_snc_split`,
-              )
+              path.replace("/api/x_split", `/api/${INSTANCE_ID}/x_split`)
           : undefined,
       },
     },

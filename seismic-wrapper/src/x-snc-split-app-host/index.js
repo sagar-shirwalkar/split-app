@@ -1,110 +1,95 @@
 import { createCustomElement } from "@servicenow/ui-core";
 import snabbdom from "@servicenow/ui-renderer-snabbdom";
 
-const view = (state, { dispatch }) => {
+// Build-time constant — rewritten by setup-scope.js
+const APP_SCOPE = "x_split";
+
+const ASSET_URL = `/api/now/ux/asset/${APP_SCOPE}/split_app_main`;
+
+let bundleLoaded = false;
+let bundleLoading = false;
+const loadCallbacks = [];
+
+/**
+ * Load the Lit bundle once (shared across all instances of this component).
+ * Returns a promise that resolves when <split-app> custom element is defined.
+ */
+function loadLitBundle() {
+  return new Promise((resolve, reject) => {
+    if (bundleLoaded) {
+      resolve();
+      return;
+    }
+
+    if (bundleLoading) {
+      loadCallbacks.push({ resolve, reject });
+      return;
+    }
+
+    bundleLoading = true;
+
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = ASSET_URL;
+
+    script.onload = () => {
+      bundleLoaded = true;
+      bundleLoading = false;
+      resolve();
+      loadCallbacks.forEach((cb) => cb.resolve());
+      loadCallbacks.length = 0;
+    };
+
+    script.onerror = (err) => {
+      bundleLoading = false;
+      const error = new Error(`Failed to load Lit bundle from ${ASSET_URL}`);
+      reject(error);
+      loadCallbacks.forEach((cb) => cb.reject(error));
+      loadCallbacks.length = 0;
+    };
+
+    document.head.appendChild(script);
+  });
+}
+
+const view = (state, { updateState }) => {
+  if (state.error) {
+    return (
+      <div className="split-app-error">
+        <p>Failed to load SplitApp: {state.error}</p>
+        <button on-click={() => updateState({ error: null, mounted: false })}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!state.mounted) {
+    return <div className="split-app-loading">Loading SplitApp...</div>;
+  }
+
+  // Render the container — Lit element is mounted via hook
   return (
     <div
       className="split-app-container"
-      hook-insert={(vnode) => mountLitApp(vnode.elm)}
-      hook-destroy={(vnode) => cleanupLitApp(vnode.elm)}
-    ></div>
+      hook-insert={(vnode) => mountLitElement(vnode.elm)}
+      hook-destroy={(vnode) => unmountLitElement(vnode.elm)}
+    />
   );
 };
 
-function mountLitApp(container) {
-  // Check if we're using bundled mode (assets exist)
-  const assetsExist = checkAssetsExist();
-  
-  if (assetsExist) {
-    // Bundled mode: Load local assets
-    mountLitAppBundled(container);
-  } else {
-    // Runtime mode: Load from sys_ux_lib_asset (existing behavior)
-    mountLitAppRuntime(container);
+function mountLitElement(container) {
+  // Only append if not already mounted (prevents duplicates on re-render)
+  if (!container.querySelector("split-app")) {
+    const splitApp = document.createElement("split-app");
+    container.appendChild(splitApp);
   }
 }
 
-function checkAssetsExist() {
-  // Check if bundled assets exist in the component's context
-  // In a deployed Seismic component, assets would be at ./split_app_main.js and ./split_app.css
-  // We'll attempt to check by creating a link element and seeing if it would load
-  // For simplicity, we'll check if we're in bundled mode by looking for a data attribute
-  // or we could make this configurable via a build-time flag
-  
-  // Simple approach: check if we can find the assets by attempting to create them
-  // Since we can't actually check filesystem from client-side JS, we'll rely on 
-  // the build process to determine which files are present
-  
-  // For now, we'll use a simple heuristic: if the component was built with 
-  // SEISMIC_LIT_MODE=bundled, the assets will be present
-  // We'll determine this by checking if a specific marker exists or by trying to load
-  
-  // Better approach: Make this configurable via a build-time variable that gets 
-  // injected into the HTML. But for simplicity in this implementation,
-  // we'll check if we can create a link to the CSS file and assume it exists if 
-  // we're in bundled mode (this would need to be set during build)
-  
-  // Since we can't detect filesystem from client-side, we'll rely on 
-  // the build process having created the appropriate files
-  // For this implementation, we'll assume bundled mode if we're running 
-  // from the seismic-wrapper context and the build was done in bundled mode
-  
-  // Actually, let's use a simpler approach: check for a specific attribute
-  // that we can set on the host element during build
-  const hostElement = document.currentScript?.ownerDocument?.host || document.querySelector('x-snc-split-app-host');
-  return hostElement ? hostElement.getAttribute('data-lit-mode') === 'bundled' : false;
-}
-
-function mountLitAppBundled(container) {
-  // Load bundled Lit component assets
-  
-  // Load CSS
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  // Assuming assets are served from the component's context
-  link.href = "./split_app.css"; 
-  
-  // Load JS
-  const script = document.createElement("script");
-  script.type = "module";
-  script.src = "./split_app_main.js";
-  
-  script.onload = () => {
-    // Once Lit bundle is loaded, create and mount the custom element
-    const splitApp = document.createElement("split-app");
-    container.appendChild(splitApp);
-  };
-  
-  container.appendChild(link);
-  container.appendChild(script);
-}
-
-function mountLitAppRuntime(container) {
-  // Load the Lit bundle (already deployed as sys_ux_lib_asset)
-  const script = document.createElement("script");
-  script.type = "module";
- 
-  // This path resolves to the sys_ux_lib_asset record
-  // The ?uxpcb= cache-buster is added automatically by the platform
-  script.src = "/api/now/ux/asset/x_snc_split/split_app_main";
-  script.onload = () => {
-    // Once Lit bundle is loaded, create and mount the custom element
-    const splitApp = document.createElement("split-app");
-    container.appendChild(splitApp);
-  };
-  container.appendChild(script);
-
-  // Inject Tailwind styles into the container
-  const style = document.createElement("style");
-  style.textContent = `/* Your compiled Tailwind CSS goes here, 
-                            or load it from another asset */`;
-  container.appendChild(style);
-}
-
-function cleanupLitApp(container) {
-  // Remove Lit element on component destroy
-  while (container.firstChild) {
-    container.removeChild(container.firstChild);
+function unmountLitElement(container) {
+  const splitApp = container.querySelector("split-app");
+  if (splitApp) {
+    container.removeChild(splitApp);
   }
 }
 
@@ -112,14 +97,56 @@ createCustomElement("x-snc-split-app-host", {
   renderer: { type: snabbdom },
   view,
   styles: `
-          .split-app-container {
-              width: 100%;
-              height: 100%;
-              min-height: 100vh;
-          }
-      `,
+        :host {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .split-app-container {
+            width: 100%;
+            min-height: calc(100vh - 56px);
+        }
+        .split-app-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .split-app-error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #dc2626;
+            font-size: 14px;
+            gap: 12px;
+        }
+        .split-app-error button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+    `,
   properties: {},
   setInitialState() {
-    return {};
+    return {
+      mounted: false,
+      error: null,
+    };
+  },
+  connectedCallback() {
+    loadLitBundle()
+      .then(() => {
+        this.updateState({ mounted: true });
+      })
+      .catch((err) => {
+        this.updateState({ error: err.message });
+      });
   },
 });

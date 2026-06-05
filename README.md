@@ -55,45 +55,57 @@ A split-expense tracking application (inspired by Splitwise) built for ServiceNo
 
 ```
 split-app/
-├── frontend/                    # Lit + Vite SPA
+├── frontend/                        # Lit + Vite SPA
 │   ├── scripts/
-│   │   └── wrap-ui-page.cjs     # UiPage XML wrapper (legacy)
+│   │   └── wrap-ui-page.cjs         # UiPage XML wrapper (legacy)
 │   ├── src/
-│   │   ├── main.ts              # Entry point (Shadow DOM + Tailwind CSS injection)
-│   │   ├── split-app.ts         # Root component (view router)
-│   │   ├── store/store.ts       # Reactive state (StoreController, singleton pattern)
-│   │   ├── services/api.ts      # Fetch-based API client (X-UserToken, discoverApiBase)
-│   │   ├── index.css            # Tailwind v4 theme with SN color palette
-│   │   ├── vite-env.d.ts        # Vite type declarations
+│   │   ├── main.ts                  # Entry point (Shadow DOM + Tailwind CSS injection via ?inline)
+│   │   ├── split-app.ts             # Root component (view router)
+│   │   ├── store/store.ts           # Reactive state (StoreController, singleton pattern)
+│   │   ├── services/api.ts          # Fetch-based API client (X-UserToken, discoverApiBase)
+│   │   ├── index.css                # Tailwind v4 theme with SN color palette
+│   │   ├── vite-env.d.ts            # Vite type declarations (includes *.css?inline)
 │   │   └── components/
 │   │       ├── user-dashboard.ts
-│   │       ├── group-list.ts         # Create group with currency + description + toast
-│   │       ├── group-detail.ts       # Member management + delete group + toast
+│   │       ├── group-list.ts             # Create group with currency + description + toast
+│   │       ├── group-detail.ts           # Member management + delete group + toast
 │   │       ├── balance-summary.ts
-│   │       ├── add-expense-form.ts   # Date picker, receipt upload, notes 100
+│   │       ├── add-expense-form.ts       # Date picker, receipt upload, notes 100
 │   │       ├── expense-list.ts
 │   │       ├── record-settlement-form.ts
-│   │       └── date-picker.ts        # Custom date picker (month/year dropdowns, 2000+)
+│   │       └── date-picker.ts            # Custom date picker (month/year dropdowns, 2000+)
 │   ├── index.html
 │   ├── tsconfig.json
-│   ├── vite.config.ts
-│   └── package.json
+│   ├── vite.config.ts               # BUILD_MODE conditional + strip-css-at-property plugin
+│   └── package.json                 # Added build:split script
+│
+├── seismic-wrapper/                  # NEW — Now Experience (Seismic) component wrapper
+│   ├── src/
+│   │   └── x-snc-split-app-host/
+│   │       ├── index.js             # Seismic component: mounts <split-app> Lit element
+│   │       └── styles.scss          # Minimal host styles (full-width container)
+│   ├── now-ui.json                  # Component registration for UI Builder
+│   └── package.json                 # @servicenow/ui-core, ui-renderer-snabbdom
+│
 ├── scripts/
-│   ├── setup-scope.js           # Detect company code, rename scope prefix across all files
-│   └── deploy.js                # Deploy/update script includes and API (Method 1)
-├── setup-bg-script.js           # Bootstrap script (for Method 1)
-├── setup-bg-script.min.js       # Minified version of bootstrap
-├── sn/                           # ServiceNow backend artifacts (JSON/JS for Method 1)
+│   ├── setup-scope.js               # Detect company code, rename scope prefix across all files
+│   ├── deploy.js                    # Deploy/update script includes and API (Method 1)
+│   └── copy-bundle.js              # NEW — Copies frontend build → sn-sdk/src/client/
+│
+├── setup-bg-script.js               # Bootstrap script (for Method 1)
+├── setup-bg-script.min.js           # Minified version of bootstrap
+│
+├── sn/                               # ServiceNow backend artifacts (JSON/JS for Method 1)
 │   ├── app.json
-│   ├── sys_db_object/           # Custom table definitions (5 tables)
-│   ├── sys_script_include/      # Business logic (5 script includes)
-│   ├── sys_ws_definition/       # REST API definition
-│   └── sys_ws_operation/        # Per-endpoint scripts (14 operations)
+│   ├── sys_db_object/               # Custom table definitions (5 tables)
+│   ├── sys_script_include/          # Business logic (5 script includes)
+│   ├── sys_ws_definition/           # REST API definition
+│   └── sys_ws_operation/            # Per-endpoint scripts (14 operations)
 │       ├── get_groups.js
 │       ├── post_groups.js
 │       ├── get_group.js
-│       ├── delete_group.js          # Admin group deletion with cascade
-│       ├── post_members.js          # Accepts user_name or user_sys_id
+│       ├── delete_group.js              # Admin group deletion with cascade
+│       ├── post_members.js              # Accepts user_name or user_sys_id
 │       ├── delete_member.js
 │       ├── post_expenses.js
 │       ├── get_expenses.js
@@ -103,34 +115,41 @@ split-app/
 │       ├── get_balances.js
 │       ├── post_settlements.js
 │       └── get_user_dashboard.js
-├── sn-sdk/                       # @servicenow/sdk ^4.7.0 fluent project (Method 2)
+│
+├── sn-sdk/                           # @servicenow/sdk ^4.7.0 fluent project (Method 2)
 │   ├── now.config.json
 │   ├── package.json
-│   ├── tsconfig.json             # Root SDK tsconfig
+│   ├── tsconfig.json                 # Root SDK tsconfig
 │   ├── scripts/
-│   │   └── build-frontend.cjs   # Builds Vite frontend → client/ JS + HTML, strips @property CSS
+│   │   └── build-frontend.cjs       # Builds Vite frontend → client/ JS + HTML, strips @property CSS
 │   ├── src/
-│   │   ├── client/              # Generated frontend files (gitignored)
-│   │   │   ├── split_app_main.jsx   # Lit bundle (sys_ui_script source)
-│   │   │   └── index.html           # HTML shell with inline CSS (sys_ui_page source)
-│   │   ├── keys.now.ts          # Type-safe logical IDs
+│   │   ├── client/                  # Generated frontend files (gitignored)
+│   │   │   ├── split_app_main.jsx       # Lit bundle (sys_ui_script source)
+│   │   │   └── index.html               # HTML shell with inline CSS (sys_ui_page source)
+│   │   ├── keys.now.ts              # Type-safe logical IDs
 │   │   ├── fluent/
-│   │   │   ├── index.now.ts     # Entry point (imports all definitions)
-│   │   │   ├── declarations.d.ts   # *.html module declaration
+│   │   │   ├── index.now.ts         # Entry point (imports all definitions)
+│   │   │   ├── declarations.d.ts       # *.html module declaration
 │   │   │   ├── ui-pages/
-│   │   │   │   └── split_app.now.ts   # UiPage fluent def (imports client/index.html)
-│   │   │   ├── tables/          # Fluent table definitions (5 tables)
-│   │   │   ├── script-includes/ # Fluent ScriptInclude wrappers (5 script includes)
-│   │   │   ├── rest-apis/       # Fluent REST API route definitions
-│   │   │   ├── generated/       # Auto-generated sys_id mappings
-│   │   │   └── tsconfig.json    # Fluent tsconfig
+│   │   │   │   └── split_app.now.ts     # UiPage fluent def (imports client/index.html)
+│   │   │   ├── tables/              # Fluent table definitions (5 tables)
+│   │   │   ├── script-includes/     # Fluent ScriptInclude wrappers (5 script includes)
+│   │   │   ├── rest-apis/           # Fluent REST API route definitions
+│   │   │   ├── workspace/           # NEW — Seismic workspace definitions
+│   │   │   │   ├── app-config.now.ts    # Workspace shell (sys_ux_app_config)
+│   │   │   │   ├── macroponent.now.ts   # Macroponent + asset dependency
+│   │   │   │   └── page.now.ts          # Page registry (landing page)
+│   │   │   ├── generated/           # Auto-generated sys_id mappings
+│   │   │   └── tsconfig.json        # Fluent tsconfig
 │   │   └── server/
-│   │       ├── script-includes/ # Server-side JS (referenced by fluent definitions)
-│   │       └── tsconfig.json    # Server tsconfig
-│   ├── target/                  # Build artifact (.zip)
-│   └── dist/                    # SDK build output
-├── deploy.js                    # Method 1 deploy script
-└── package.json                 # Root workspace (concurrently)
+│   │       ├── script-includes/     # Server-side JS (referenced by fluent definitions)
+│   │       └── tsconfig.json        # Server tsconfig
+│   ├── target/                      # Build artifact (.zip)
+│   └── dist/                        # SDK build output
+│
+├── deploy.js                        # Method 1 deploy script
+├── .gitignore                       # Includes .env, sn-sdk/.env, sn-sdk/src/client/
+└── package.json                     # Root workspace (concurrently)
 ```
 
 ### REST API Endpoints
@@ -294,9 +313,9 @@ npm run deploy -- https://dev123456.service-now.com admin your-password
 
 The bootstrap (step 2) only needs to be run once per instance.
 
-### Deployment method 2 : Deploy using @servicenow/sdk 4.7.0 (now-sdk)
+### Method 2: Deploy using @servicenow/sdk 4.7.0 (now-sdk)
 
-The ServiceNow SDK compiles fluent TypeScript definitions (`.now.ts` files) into an installable package and deploys it to your instance. This method is faster than Method 1 for repeat deployments but has additional server-side prerequisites.
+The ServiceNow SDK compiles fluent TypeScript definitions (`.now.ts` files) into an installable package and deploys it to your instance. Supports deployment to both a local GLL instance and a remote PDI.
 
 **When to use Method 2 vs Method 1:**
 
@@ -307,17 +326,18 @@ The ServiceNow SDK compiles fluent TypeScript definitions (`.now.ts` files) into
 | Server requirements | Needs `sn_glider` + `sn_appclient` plugins | Works on any PDI |
 | Instance compatibility | Australia — Zurich (v4.x) | Any release |
 | Scope prefix restriction | Must match `glide.appcreator.company.code` | No restriction |
+| Local GLL support | Full support via env vars | Requires manual URL config |
 
 #### Prerequisites
 
-- Node.js >= 20 (tested with v22.14.0), npm (tested with 11.4.2), admin credentials for the PDI
+- Node.js >= 20 (tested with v22.14.0), npm (tested with 11.4.2), admin credentials for the target instance
 - **ServiceNow IDE plugin** (`sn_glider`) v4.1.1+ installed on the instance ([ServiceNow Store](https://store.servicenow.com/sn_appstore_store.do#!/store/help?article=com.servicenow.ide))
 - **Scoped App Client** (`sn_appclient`) v29.0.4+ active on the instance
-- The app scope prefix must match your PDI's `glide.appcreator.company.code` (handled automatically by `setup-scope.js`)
+- The app scope prefix must match your instance's `glide.appcreator.company.code` (handled automatically by `setup-scope.js`)
 
 #### Pre-flight verification
 
-Run these checks on your instance to confirm compatibility before using the SDK:
+Run these checks on your instance (local or PDI) to confirm compatibility:
 
 **1. Check the release — SDK v4.x requires Australia or later**
 
@@ -330,37 +350,22 @@ Run these checks on your instance to confirm compatibility before using the SDK:
 
 Navigate to **System Applications → All Available Applications** (or `sys_store_app.do`) and search for `ServiceNow IDE`. The version must be 4.1.1 or later.
 
-If it's not installed, download it from the [ServiceNow Store](https://store.servicenow.com/sn_appstore_store.do#!/store/help?article=com.servicenow.ide).
-
 **3. Verify the Scoped App Client is active**
 
 ```sql
 -- Via REST:
 GET /api/now/table/sys_plugins?sysparm_query=name=com.glide.appclient
-
--- Or navigate to System Applications → Plugins and search for "Scoped App Client"
 ```
-
-If not active, activate the **Scoped App Client** plugin (`com.glide.appclient`).
 
 #### Step 1: Run the scope setup script
 
-The scope prefix must match your PDI's `glide.appcreator.company.code` property. Run `setup-scope.js` to detect the company code and rename all `x_split` references to `x_{company_code}_split` across source files:
-
 ```bash
 node scripts/setup-scope.js https://dev123456.service-now.com admin 'your-password'
+# Or for local GLL:
+node scripts/setup-scope.js http://localhost:8080 admin admin
 ```
 
-This script:
-- Reads `glide.appcreator.company.code` from the instance via REST
-- Renames `x_split` → `x_{code}_split` in all `.now.ts`, `.server.js`, `sn/`, and config files
-- Regenerates a fresh `scopeId` in `now.config.json`
-
-> If the property is empty, the scope stays as `x_split` (no renaming needed).
-
 #### Step 2: Set up the SDK project
-
-Install SDK dependencies:
 
 ```bash
 cd sn-sdk && npm install
@@ -368,33 +373,58 @@ cd sn-sdk && npm install
 
 #### Step 3: Authenticate
 
-The SDK needs stored credentials to install. Use `auth --add` to save them to your OS keychain (done once per instance):
+**Option A: OS keychain (interactive, one-time per instance)**
 
 ```bash
+# For PDI:
 cd sn-sdk && npx @servicenow/sdk auth --add https://dev123456.service-now.com --type basic
+
+# For local GLL:
+cd sn-sdk && npx @servicenow/sdk auth --add http://localhost:8080 --type basic
 ```
 
-For CI/CD or scripted environments, use the environment variable method. All four variables must be set in the same shell session:
+**Option B: Environment variables (CI/CD or scripted)**
+
+All four variables must be set in the same shell session:
 
 ```bash
 export SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL
-export SN_SDK_INSTANCE_URL=https://dev123456.service-now.com
+export SN_SDK_INSTANCE_URL=http://localhost:8080    # or https://dev123456.service-now.com
 export SN_SDK_USER=admin
 export SN_SDK_USER_PWD='your-password'
 ```
 
 Single-quote the password to prevent shell interpretation of special characters.
 
-#### Step 4: Build and install (frontend + backend)
+#### Step 4: Build and install
 
-The `deploy:all` command builds the frontend, compiles the SDK fluent definitions, and installs everything in one step:
+**Deploy to local GLL instance (one command):**
 
 ```bash
 cd sn-sdk
-npm run deploy:all       # build frontend → SDK build → install
+npm run deploy:local
 ```
 
-Or run the steps individually:
+This sets env vars targeting `http://localhost:8080` and runs the full pipeline (build frontend → SDK build → install).
+
+**Deploy to PDI (credentials from keychain or env vars):**
+
+```bash
+cd sn-sdk
+npm run deploy:pdi
+```
+
+If using env vars instead of keychain for PDI:
+
+```bash
+SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL \
+SN_SDK_INSTANCE_URL=https://dev123456.service-now.com \
+SN_SDK_USER=admin \
+SN_SDK_USER_PWD='your-password' \
+npm run deploy:pdi
+```
+
+**Or run the steps individually:**
 
 ```bash
 cd sn-sdk
@@ -403,25 +433,102 @@ npx now-sdk build       # compile fluent .now.ts → dist/app/
 npx now-sdk install     # push to instance
 ```
 
-The build pipeline:
+#### Build pipeline
 
-1. **`build:frontend`** — Vite builds the Lit app into `frontend/dist/index.html`. The script extracts the JS bundle and CSS from the single-file output, writes them to `sn-sdk/src/client/`:
-   - `split_app_main.jsx` — the Lit bundle (becomes a `sys_ui_script` record)
-   - `index.html` — an HTML shell with `<style>` for CSS and `<script src="split_app_main.jsx?uxpcb=$[UxFrameworkScriptables.getFlushTimestamp()]">` (the `uxpcb` parameter appends a server-side timestamp for cache busting)
-   - `tsconfig.json` — TypeScript config for SDK build processing
+1. **`build:frontend`** — Vite builds the Lit app. Tailwind CSS is bundled directly into the JS via `?inline` import (no separate CSS extraction needed). The build script extracts the JS bundle from Vite's single-file output and writes:
+   - `split_app_main.jsx` — the Lit bundle with embedded Tailwind CSS (becomes a `sys_ui_script` record)
+   - `index.html` — a minimal HTML shell with `<script src="split_app_main.jsx?uxpcb=$[UxFrameworkScriptables.getFlushTimestamp()]">` (the `uxpcb` parameter appends a server-side timestamp for cache busting)
 
 2. **`now-sdk build`** — The SDK compiles fluent definitions. The UiPage (`ui-pages/split_app.now.ts`) imports the HTML shell via `import page from "../../client/index.html"`. The SDK build system detects the `<script src>` reference, creates a `sys_ui_script` record from `split_app_main.jsx`, and wires the UiPage to reference it. The JS bundle is served as a static file (`split_app_main.jsdbx`) — it bypasses ServiceNow's Jelly XML parser, avoiding the blank-page issue caused by `<` operators in inline JS.
 
-3. **`now-sdk install`** — Pushes both `sys_ui_page` and `sys_ui_script` records to the instance.
+3. **`now-sdk install`** — Pushes all records (`sys_ui_page`, `sys_ui_script`, tables, script includes, REST API, workspace config) to the target instance.
 
-If successful, you'll see:
+#### `sn-sdk/package.json` scripts
 
+```json
+{
+  "scripts": {
+    "build": "now-sdk build",
+    "deploy": "now-sdk build && now-sdk install",
+    "build:frontend": "node scripts/build-frontend.cjs",
+    "build:all": "node scripts/build-frontend.cjs && now-sdk build",
+    "deploy:all": "node scripts/build-frontend.cjs && now-sdk build && now-sdk install",
+    "deploy:local": "SN_SDK_NODE_ENV=SN_SDK_CI_INSTALL SN_SDK_INSTANCE_URL=http://localhost:8080 SN_SDK_USER=admin SN_SDK_USER_PWD=admin npm run deploy:all",
+    "deploy:pdi": "npm run deploy:all"
+  }
+}
 ```
-[now-sdk] Installation completed. Access the application at:
-  https://dev123456.service-now.com/sys_app.do?sys_id=<app_sys_id>
+
+#### `now.config.json`
+
+```json
+{
+  "scope": "x_snc_split",
+  "scopeId": "6789306cf3ff41b5969db7ab6ce63322",
+  "name": "Split App",
+  "tsconfigPath": "./src/server/tsconfig.json"
+}
 ```
 
-The frontend is deployed as a UI Page accessible at `https://dev123456.service-now.com/x_{scope}_split_app.do`.
+Instance targeting is handled entirely through env vars or OS keychain — not in the config file.
+
+---
+
+### Method 3: Deploy Seismic workspace wrapper (Now Experience)
+
+Deploys the Now Experience component that wraps the Lit app inside a workspace shell. This provides an alternate access path at `/now/workspace/split-app` alongside the existing UI Page at `/x_snc_split_split_app.do`.
+
+**Prerequisites:**
+
+- Method 2 must be deployed first (the Seismic wrapper depends on the `sys_ux_lib_asset` created by the UiPage build)
+- `@servicenow/cli` (now-cli) installed globally or via npx
+
+#### Step 1: Install seismic-wrapper dependencies
+
+```bash
+cd seismic-wrapper && npm install
+```
+
+#### Step 2: Build and deploy
+
+**To local GLL:**
+
+```bash
+cd seismic-wrapper
+SN_INSTANCE=http://localhost:8080 \
+SN_USERNAME=admin \
+SN_PASSWORD=admin \
+npx now-cli deploy
+```
+
+**To PDI:**
+
+```bash
+cd seismic-wrapper
+SN_INSTANCE=https://dev123456.service-now.com \
+SN_USERNAME=admin \
+SN_PASSWORD='your-password' \
+npx now-cli deploy
+```
+
+#### What gets deployed
+
+| Record Type | Name | Purpose |
+|---|---|---|
+| `sys_ux_macroponent` | Split App Host | Macroponent wrapping the Seismic component |
+| `sys_ux_macroponent_req_dep` | — | Links macroponent → Lit bundle asset |
+| `sys_ux_app_config` | SplitApp | Workspace shell at `/now/workspace/split-app` |
+| `sys_ux_page_registry` | Home | Landing page rendering the macroponent |
+| Component code | `x-snc-split-app-host` | The Seismic element that mounts `<split-app>` |
+
+#### Access paths after deployment
+
+| Path | Method | Description |
+|------|--------|-------------|
+| `/x_snc_split_split_app.do` | Method 2 (UI Page) | Standalone page, no workspace chrome |
+| `/now/workspace/split-app` | Method 3 (Workspace) | Full workspace shell with navigation |
+
+Both load the same `split_app_main.jsdbx` bundle — the Lit app is identical, only the surrounding shell differs.
 
 #### What gets created
 

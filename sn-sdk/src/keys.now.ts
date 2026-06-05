@@ -31,7 +31,6 @@ declare global {
       "split-ui-page": "split-ui-page";
       "split-app-workspace": "split-app-workspace";
       "split-app-macroponent": "split-app-macroponent";
-      "split-app-macroponent-dep": "split-app-macroponent-dep";
       "split-app-workspace-page": "split-app-workspace-page";
     }
   }

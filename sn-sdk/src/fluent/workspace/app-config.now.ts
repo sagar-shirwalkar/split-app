@@ -9,12 +9,16 @@ import { Record } from "@servicenow/sdk/core";
  *
  * Accessible at: /now/workspace/split-app (or /now/split-app depending on version)
  */
-Record("sys_ux_app_config", {
+
+Record({
   $id: Now.ID["split-app-workspace"],
-  title: "SplitApp",
-  description: "Expense splitting workspace",
-  url_path: "split-app",
-  app_shell_ui: "workspace",
-  roles: "",
-  active: true,
+  table: "sys_ux_app_config",
+  data: {
+    title: "SplitApp",
+    description: "Expense splitting workspace",
+    url_path: "split-app",
+    app_shell_ui: "workspace",
+    roles: "",
+    active: true,
+  },
 });

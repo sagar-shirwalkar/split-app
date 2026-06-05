@@ -9,20 +9,23 @@ import { Record } from "@servicenow/sdk/core";
  * at runtime via /api/now/ux/asset/x_snc_split/split_app_main —
  * no platform-level asset dependency needed.
  */
-Record("sys_ux_macroponent", {
+Record({
   $id: Now.ID["split-app-macroponent"],
-  name: "Split App Host",
-  description:
-    "Hosts the Lit-based SplitApp custom element inside a Now Experience workspace",
-  tag: "x-snc-split-app-host",
-  category: "custom",
-  props: JSON.stringify([]),
-  slots: JSON.stringify([]),
-  dispatched_events: JSON.stringify([]),
-  handled_events: JSON.stringify([]),
-  data_resources: JSON.stringify([]),
-  composition: JSON.stringify({ elements: [] }),
-  applicable_to: "workspace",
+  table: "sys_ux_macroponent",
+  data: {
+    name: "Split App Host",
+    description:
+      "Hosts the Lit-based SplitApp custom element inside a Now Experience workspace",
+    tag: "x-snc-split-app-host",
+    category: "custom",
+    props: JSON.stringify([]),
+    slots: JSON.stringify([]),
+    dispatched_events: JSON.stringify([]),
+    handled_events: JSON.stringify([]),
+    data_resources: JSON.stringify([]),
+    composition: JSON.stringify({ elements: [] }),
+    applicable_to: "workspace",
+  },
 });
 
 // NOTE: No sys_ux_macroponent_req_dep record.

@@ -47,6 +47,15 @@ interface AppState {
 
 let _instance: StoreController | null = null;
 
+/** Coerce any API response (array | {result: ...} | null | whatever) to an array. */
+function toArray(r: unknown): any[] {
+  if (Array.isArray(r)) return r;
+  if (r && typeof r === "object" && Array.isArray((r as any).result)) {
+    return (r as any).result;
+  }
+  return [];
+}
+
 export class StoreController implements ReactiveController {
   private _hosts = new Set<ReactiveControllerHost>();
   private _booted = false;
@@ -98,10 +107,10 @@ export class StoreController implements ReactiveController {
   async loadDashboard() {
     try {
       const r = await apiGet("/user/dashboard");
-      const dash = r.result || r;
+      const dash = (r && typeof r === "object" ? r.result ?? r : r) ?? null;
       this.state.userDashboard = dash;
-      if (dash.current_user) {
-        this.state.currentUser = dash.current_user;
+      if (dash && typeof dash === "object" && dash.current_user) {
+        this.state.currentUser = String(dash.current_user);
       }
     } catch (e) {}
     this._notify();
@@ -110,7 +119,7 @@ export class StoreController implements ReactiveController {
   async loadGroups() {
     try {
       const r = await apiGet("/groups");
-      this.state.groups = Array.isArray(r) ? r : r.result || [];
+      this.state.groups = toArray(r);
     } catch (e) {
       this.state.groups = [];
     }
@@ -120,11 +129,12 @@ export class StoreController implements ReactiveController {
   async loadGroupDetail(groupId: string) {
     try {
       const r = await apiGet(`/groups/${groupId}`);
-      this.state.currentGroup = r.result || r;
+      this.state.currentGroup =
+        r && typeof r === "object" ? r.result ?? r : undefined;
       const b = await apiGet(`/groups/${groupId}/balances`);
-      this.state.balances = Array.isArray(b) ? b : b.result || [];
+      this.state.balances = toArray(b);
       const ex = await apiGet(`/groups/${groupId}/expenses`);
-      this.state.expenses = Array.isArray(ex) ? ex : ex.result || [];
+      this.state.expenses = toArray(ex);
     } catch (e) {}
     this._notify();
   }

@@ -73,6 +73,30 @@ declare global {
                         table: 'sys_ws_operation'
                         id: 'de201340e36c4642836cfc006e49ecf3'
                     }
+                    'split-app-config': {
+                        table: 'sys_ux_app_config'
+                        id: 'b65cd5935a274767856a6894bc3ee63a'
+                    }
+                    'split-app-module': {
+                        table: 'sys_app_module'
+                        id: '6cd99eae82ef4be2846ab5f7cf72f548'
+                    }
+                    'split-app-route': {
+                        table: 'sys_ux_app_route'
+                        id: '9cdce4fcb77843cbb598e49474717275'
+                    }
+                    'split-macroponent-host': {
+                        table: 'sys_ux_macroponent'
+                        id: 'a594b4464bd8456eb8e4396ea8c5980d'
+                    }
+                    'split-screen-home': {
+                        table: 'sys_ux_screen'
+                        id: '12421ce71bbf443d9ebf130fa805ce84'
+                    }
+                    'split-screen-type': {
+                        table: 'sys_ux_screen_type'
+                        id: '74b937eb3c2d46b7952403d05296a328'
+                    }
                     'split-si-balance-calculator': {
                         table: 'sys_script_include'
                         id: 'bd9b064333054958bda7d21f3f48e8ee'

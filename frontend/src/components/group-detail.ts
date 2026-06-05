@@ -77,7 +77,8 @@ export class GroupDetail extends LitElement {
     }
 
     const currentUserId = this.store.state.currentUser;
-    const isAdmin = group.members?.some(
+    const members = Array.isArray(group.members) ? group.members : [];
+    const isAdmin = members.some(
       (m: any) => m.sys_id === currentUserId && m.role === "admin",
     );
 
@@ -122,7 +123,7 @@ export class GroupDetail extends LitElement {
           </section-header>
 
           <div class="card divide-y divide-ink-200">
-            ${(group.members ?? []).map(
+            ${members.map(
               (m: any) => html`
                 <div class="flex items-center gap-3 px-4 py-3">
                   <sn-avatar .name=${m.name} size="md"></sn-avatar>
@@ -195,7 +196,7 @@ export class GroupDetail extends LitElement {
 
           <balance-summary
             .balances=${this.store.state.balances}
-            .members=${group.members}
+            .members=${members}
             .currency=${group.base_currency}
           ></balance-summary>
         </section>
@@ -203,13 +204,13 @@ export class GroupDetail extends LitElement {
         <section class="space-y-3">
           <add-expense-form
             .groupId=${group.sys_id}
-            .members=${group.members}
+            .members=${members}
             .currency=${group.base_currency}
           ></add-expense-form>
 
           <record-settlement-form
             .groupId=${group.sys_id}
-            .members=${group.members}
+            .members=${members}
             .currency=${group.base_currency}
           ></record-settlement-form>
         </section>

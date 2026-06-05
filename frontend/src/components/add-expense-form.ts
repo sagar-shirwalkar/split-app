@@ -224,7 +224,7 @@ export class AddExpenseForm extends LitElement {
                 @change=${(e: any) => (this.payer = e.target.value)}
               >
                 <option value="">You (default)</option>
-                ${this.members.map(
+                ${(Array.isArray(this.members) ? this.members : []).map(
                   (m: any) =>
                     html`<option value=${m.sys_id}>${m.name}</option>`,
                 )}
@@ -261,7 +261,7 @@ export class AddExpenseForm extends LitElement {
                         ? "Percent per person"
                         : "Shares per person"}
                   </p>
-                  ${this.members.map(
+                  ${(Array.isArray(this.members) ? this.members : []).map(
                     (m: any) => html`
                       <div class="flex items-center gap-2">
                         <span

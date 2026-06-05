@@ -39,7 +39,9 @@ export class GroupList extends LitElement {
   }
 
   render() {
-    const groups = this.store.state.groups;
+    const groups = Array.isArray(this.store.state.groups)
+      ? this.store.state.groups
+      : [];
     return html`
       <div class="space-y-6">
         <section>

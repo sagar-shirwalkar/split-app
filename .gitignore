@@ -6,6 +6,7 @@ dist
 # SDK build artifacts (instance-specific metadata, packaged zips)
 sn-sdk/target/
 sn-sdk/.now/
+sn-sdk/.now/bom.json
 
 # Generated frontend client files (built by scripts/build-frontend.cjs)
 sn-sdk/src/client/split_app_main.jsx

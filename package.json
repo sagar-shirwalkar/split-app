@@ -5,7 +5,12 @@
     "dev": "concurrently \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
-    "deploy": "node deploy.js"
+    "build:seismic": "cd seismic-wrapper && npm run build",
+    "deploy": "node deploy.js",
+    "deploy:local": "npm run build && npm run _copy-bundle && cd sn-sdk && now-sdk deploy --profile local",
+    "deploy:pdi": "npm run build && npm run _copy-bundle && cd sn-sdk && now-sdk deploy --profile pdi",
+    "deploy:seismic:local": "npm run build:seismic && cd seismic-wrapper && now-cli deploy --profile local",
+    "_copy-bundle": "node scripts/copy-bundle.js"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
